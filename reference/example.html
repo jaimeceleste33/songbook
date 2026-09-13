@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Cancionero</title>
+    <style>
+        :root {
+            --song-font-size: 18px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f4f6f8;
+            padding: 20px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        /* Panel lateral para agregar/editar canciones */
+        .editor-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            flex: 1;
+            min-width: 320px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            height: fit-content;
+        }
+
+        .editor-panel h2 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .form-group input[type="text"],
+        .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        /* Botones */
+        .btn {
+            background: #0088cc;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            background: #006699;
+        }
+
+        .btn-add {
+            background: #28a745;
+            margin-top: 5px;
+        }
+
+        .btn-add:hover {
+            background: #218838;
+        }
+
+        .btn-clear {
+            background: #6c757d;
+            font-size: 12px;
+            padding: 6px;
+            margin-bottom: 15px;
+        }
+
+        /* Control de Tamaño de Letra */
+        .font-control {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: bold;
+        }
+
+        /* Bloques de edición de partes */
+        .section-input-card {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+
+        .section-input-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        .section-input-header input[type="text"] {
+            font-weight: bold;
+            flex: 1;
+            min-width: 120px;
+            padding: 4px 6px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .color-pickers {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .color-pickers input[type="color"] {
+            border: none;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            background: none;
+        }
+
+        .btn-small {
+            background: #eee;
+            border: 1px solid #ccc;
+            padding: 3px 8px;
+            cursor: pointer;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+
+        .btn-remove {
+            background: #ff4d4d;
+            color: white;
+            border: none;
+            padding: 3px 8px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+
+        /* Lista de canciones desplegadas (Estilo exacto del código original) */
+        .songs-container {
+            flex: 2;
+            min-width: 320px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        /* Tarjeta de Canción (Replicando el diseño de tu imagen) */
+        .song-card {
+            background: white;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+            max-width: 500px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .song-header {
+            color: white;
+            padding: 12px 20px;
+            font-weight: bold;
+            font-size: 20px;
+            text-transform: uppercase;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .song-controls button {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            margin-left: 8px;
+        }
+
+        /* Secciones (Verso, Coro, etc.) */
+        .section {
+            display: flex;
+            border-bottom: 2px solid #fff;
+        }
+
+        .section-label {
+            width: 50px;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            word-break: break-word;
+            font-size: 14px;
+            text-transform: uppercase;
+            writing-mode: vertical-lr;
+            transform: rotate(180deg);
+            padding: 10px 0;
+        }
+
+        /* Texto con tamaño dinámico y color personalizado */
+        .section-content {
+            padding: 15px 20px;
+            flex: 1;
+            line-height: 1.4;
+            white-space: pre-line;
+            font-size: var(--song-font-size);
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Panel de Edición -->
+    <div class="editor-panel">
+        <h2>Agregar Canción</h2>
+        <button class="btn btn-clear" onclick="clearAllSongs()">⚠️ Limpiar todas las canciones guardadas</button>
+
+        <!-- Control de Tamaño de Letra Global -->
+        <div class="font-control">
+            <span>Tamaño de letra:</span>
+            <input type="range" id="fontSizeRange" min="14" max="36" value="18" oninput="changeFontSize(this.value)">
+            <span id="fontSizeVal">18px</span>
+        </div>
+
+        <!-- Datos generales de la canción -->
+        <div class="form-group">
+            <label>Título de la canción:</label>
+            <input type="text" id="title" placeholder="Ej: PARA SIEMPRE REY">
+        </div>
+
+        <div class="form-group">
+            <label>Color de fondo del título:</label>
+            <input type="color" id="headerColor" value="#38b6ff"
+                style="width: 100%; height: 35px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;">
+        </div>
+
+        <label><b>Estructura de la Canción:</b></label>
+        <div id="sectionsInputContainer"></div>
+
+        <button type="button" class="btn btn-add" onclick="addSectionInput()">+ Agregar otra sección
+            personalizada</button>
+        <button type="button" class="btn" onclick="addSong()">Guardar Canción</button>
+    </div>
+
+    <!-- Contenedor del Lista de Canciones -->
+    <div class="songs-container" id="songsList"></div>
+
+    <script>
+        // Recuperar lista guardada en localStorage o iniciar con el ejemplo original
+        let songs = JSON.parse(localStorage.getItem('mySongs')) || [
+            {
+                id: 1,
+                title: "PARA SIEMPRE REY",
+                headerColor: "#38b6ff",
+                sections: [
+                    { type: "VERSO 1", labelBg: "#2980b9", textColor: "#000000", content: "Quiero cantar\nDe tus maravillas Señor\nY darte toda mi adoración\nDe todo corazón" },
+                    { type: "VERSO 2", labelBg: "#1f618d", textColor: "#0055a5", content: "Yo quiero gritar\nY exaltar tu nombre oh Dios\nY unidos como tu creación\nRecibe el honor..." },
+                    { type: "CORO", labelBg: "#2e86c1", textColor: "#000000", content: "Eres Rey\nPermaneces fiel\nReinas con poder\nPara siempre Rey" },
+                    { type: "PUENTE", labelBg: "#154360", textColor: "#0055a5", content: "Declaramos tu grandeza\nDeclaramos tus promesas\nSobre nuestras vidas hoy" }
+                ]
+            }
+        ];
+
+        // Ajuste dinámico de tamaño de texto
+        function changeFontSize(val) {
+            document.getElementById('fontSizeVal').innerText = val + 'px';
+            document.documentElement.style.setProperty('--song-font-size', val + 'px');
+        }
+
+        // Agregar un bloque de edición editable y personalizable en color
+        function addSectionInput(type = 'VERSO', labelBg = '#2980b9', textColor = '#000000', content = '') {
+            const container = document.getElementById('sectionsInputContainer');
+            const div = document.createElement('div');
+            div.className = 'section-input-card';
+            div.innerHTML = `
+        <div class="section-input-header">
+          <input type="text" class="sec-type" value="${type}" placeholder="Nombre (Ej: VERSO 3)">
+          <div class="color-pickers">
+            <label title="Color de la etiqueta lateral">Fondo: <input type="color" class="sec-label-bg" value="${labelBg}"></label>
+            <label title="Color del texto de la letra">Texto: <input type="color" class="sec-text-color" value="${textColor}"></label>
+          </div>
+          <div>
+            <button type="button" class="btn-small" onclick="moveSectionInput(this, -1)">▲</button>
+            <button type="button" class="btn-small" onclick="moveSectionInput(this, 1)">▼</button>
+            <button type="button" class="btn-remove" onclick="this.closest('.section-input-card').remove()">✕</button>
+          </div>
+        </div>
+        <textarea class="sec-content" rows="3" placeholder="Escribe la letra de esta sección...">${content}</textarea>
+      `;
+            container.appendChild(div);
+        }
+
+        // Reordenar las secciones dentro de la tarjeta de edición
+        function moveSectionInput(btn, direction) {
+            const card = btn.closest('.section-input-card');
+            if (direction === -1 && card.previousElementSibling) {
+                card.parentNode.insertBefore(card, card.previousElementSibling);
+            } else if (direction === 1 && card.nextElementSibling) {
+                card.parentNode.insertBefore(card.nextElementSibling, card);
+            }
+        }
+
+        // Guardar una nueva canción
+        function addSong() {
+            const title = document.getElementById('title').value;
+            const headerColor = document.getElementById('headerColor').value;
+            if (!title) return alert("Por favor ingresa un título");
+
+            const cards = document.querySelectorAll('.section-input-card');
+            const sections = [];
+
+            cards.forEach(card => {
+                const type = card.querySelector('.sec-type').value.toUpperCase();
+                const labelBg = card.querySelector('.sec-label-bg').value;
+                const textColor = card.querySelector('.sec-text-color').value;
+                const content = card.querySelector('.sec-content').value;
+
+                if (content.trim() !== '') {
+                    sections.push({ type, labelBg, textColor, content });
+                }
+            });
+
+            if (sections.length === 0) return alert("Ingresa al menos una parte con texto.");
+
+            songs.push({
+                id: Date.now(),
+                title: title.toUpperCase(),
+                headerColor: headerColor,
+                sections: sections
+            });
+
+            saveAndRender();
+
+            // Limpiar el formulario
+            document.getElementById('title').value = '';
+            resetFormFields();
+        }
+
+        function saveAndRender() {
+            localStorage.setItem('mySongs', JSON.stringify(songs));
+            renderSongs();
+        }
+
+        // Mover canciones en la lista general
+        function moveSong(index, direction) {
+            const targetIndex = index + direction;
+            if (targetIndex < 0 || targetIndex >= songs.length) return;
+            const temp = songs[index];
+            songs[index] = songs[targetIndex];
+            songs[targetIndex] = temp;
+            saveAndRender();
+        }
+
+        // Borrado definitivo de canción por ID
+        function deleteSong(id) {
+            if (confirm("¿Segura que quieres eliminar esta canción de la lista?")) {
+                songs = songs.filter(s => s.id !== id);
+                saveAndRender();
+            }
+        }
+
+        // Borrado general de todo por si aparecen datos no deseados
+        function clearAllSongs() {
+            if (confirm("¿Quieres borrar TODAS las canciones guardadas? Esta acción no se puede deshacer.")) {
+                songs = [];
+                saveAndRender();
+            }
+        }
+
+        // Renderizado visual manteniendo la gráfica exacta original
+        function renderSongs() {
+            const container = document.getElementById('songsList');
+            container.innerHTML = '';
+
+            songs.forEach((song, index) => {
+                const headerBg = song.headerColor || "#38b6ff";
+                let html = `
+          <div class="song-card">
+            <div class="song-header" style="background-color: ${headerBg};">
+              <span>${song.title}</span>
+              <div class="song-controls">
+                <button onclick="moveSong(${index}, -1)">▲</button>
+                <button onclick="moveSong(${index}, 1)">▼</button>
+                <button onclick="deleteSong(${song.id})">🗑️</button>
+              </div>
+            </div>
+        `;
+
+                if (song.sections && song.sections.length > 0) {
+                    song.sections.forEach(sec => {
+                        html += `
+              <div class="section">
+                <div class="section-label" style="background-color: ${sec.labelBg};">${sec.type}</div>
+                <div class="section-content" style="color: ${sec.textColor};">${sec.content}</div>
+              </div>`;
+                    });
+                }
+
+                html += `</div>`;
+                container.innerHTML += html;
+            });
+        }
+
+        // Inicializar el formulario con los bloques originales
+        function resetFormFields() {
+            document.getElementById('sectionsInputContainer').innerHTML = '';
+            addSectionInput('VERSO 1', '#2980b9', '#000000');
+            addSectionInput('VERSO 2', '#1f618d', '#0055a5');
+            addSectionInput('CORO', '#2e86c1', '#000000');
+            addSectionInput('PUENTE', '#154360', '#0055a5');
+        }
+
+        // Ejecutar al cargar la página
+        resetFormFields();
+        renderSongs();
+    </script>
+</body>
+
+</html>
