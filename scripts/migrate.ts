@@ -8,20 +8,30 @@ import { config } from 'dotenv'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import { Pool } from 'pg'
+import { requireDatabaseUrl, isPooled } from '../src/lib/db/url.ts'
 
 config({ path: ['.env.local', '.env'], quiet: true })
 
-const url = process.env.DATABASE_URL
-if (!url) {
-  console.error('DATABASE_URL is not set. Copy .env.example to .env.local first.')
+let url: string
+try {
+  url = requireDatabaseUrl()
+} catch (error) {
+  console.error((error as Error).message)
   process.exit(1)
 }
 
-const isLocal = /localhost|127\.0\.0\.1/.test(url)
+const isLocalDb = /localhost|127\.0\.0\.1/.test(url)
+if (!isLocalDb && !isPooled(url)) {
+  console.warn(
+    'Warning: this connection string is not the pooled endpoint (-pooler). ' +
+      'Migrations will still run, but the app should point at the pooled one.',
+  )
+}
+
 const pool = new Pool({
   connectionString: url,
   max: 1,
-  ssl: isLocal ? false : { rejectUnauthorized: true },
+  ssl: isLocalDb ? false : { rejectUnauthorized: true },
 })
 
 try {

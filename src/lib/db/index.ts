@@ -1,15 +1,16 @@
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import * as schema from './schema'
+import { requireDatabaseUrl } from './url'
 
 /**
  * node-postgres rather than a Neon-only driver: the same code path runs
  * against a local Postgres in development and against Neon in production
  * (Neon speaks the standard wire protocol on its `-pooler` endpoint).
  *
- * In production always point DATABASE_URL at the POOLED connection string.
- * Serverless invocations are many and short-lived, and an unpooled endpoint
- * runs out of connections quickly.
+ * In production the connection string must be the POOLED one. Serverless
+ * invocations are many and short-lived, and an unpooled endpoint runs out of
+ * connections quickly. See ./url.ts for how the variable is resolved.
  *
  * The pool is built lazily on first query. Connecting at import time would
  * fail the Vercel build, which imports every page module before the database
@@ -22,13 +23,7 @@ const globalForDb = globalThis as unknown as {
 }
 
 function connect(): NodePgDatabase<typeof schema> {
-  const url = process.env.DATABASE_URL
-  if (!url) {
-    throw new Error(
-      'DATABASE_URL is not set. In development copy .env.example to .env.local; ' +
-        'in production add the database integration and redeploy.',
-    )
-  }
+  const url = requireDatabaseUrl()
 
   const pool =
     globalForDb.songbookPool ??

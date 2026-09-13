@@ -52,10 +52,16 @@ pnpm dev
 
 1. Push this repo to the singer's GitHub account.
 2. Import it in their Vercel account.
-3. Add the **Neon** integration from the Vercel Marketplace — it sets
-   `DATABASE_URL` automatically.
+3. Add the **Neon** integration from the Vercel Marketplace. It creates its own
+   connection-string variable; the app reads `DATABASE_URL`, `STORAGE_URL` or
+   `POSTGRES_URL`, whichever is set, so leave the integration's variable alone
+   instead of copying its value elsewhere — the provider rotates it.
 4. Add `SONGBOOK_PASSWORD` and `SESSION_SECRET` as environment variables.
-5. Run `pnpm db:push` once against the production database to create tables.
+5. Run `pnpm db:migrate` once against the production database to create tables.
+
+The connection string must be the **pooled** endpoint (host ending in
+`-pooler`). Serverless invocations are many and short-lived and will exhaust an
+unpooled endpoint; `pnpm db:migrate` warns if it sees a non-pooled remote host.
 
 On the iPad: open the deployed URL in Safari, Share → **Add to Home Screen**.
 
