@@ -22,6 +22,10 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Everything except static assets, the icons and the offline manifest.
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|icons|manifest.webmanifest|sw.js).*)'],
+  // Everything except static assets, the icon, the manifest and the worker.
+  // These must stay reachable while logged out: the installed iPad app fetches
+  // the icon and manifest before anyone has a session.
+  matcher: [
+    '/((?!_next/static|_next/image|favicon\\.ico|icon\\.svg|manifest\\.webmanifest|sw\\.js).*)',
+  ],
 }
