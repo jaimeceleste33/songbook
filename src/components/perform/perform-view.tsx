@@ -2,7 +2,9 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { STAGE } from '@/lib/lyrics/theme'
 import { buildPages, type PerformPage, type PerformSong } from '@/lib/perform/layout'
+import { PAGE_PAD_TOP, PAGE_PAD_X, usableHeight, usableWidth } from '@/lib/perform/sheet'
 import { useWakeLock } from '@/lib/perform/use-wake-lock'
 import { SongPage } from './song-page'
 import { SetlistOverlay } from './setlist-overlay'
@@ -65,10 +67,11 @@ export function PerformView({
       frame = requestAnimationFrame(() => {
         const rect = stage.getBoundingClientRect()
         if (rect.width < 40 || rect.height < 40) return
-        host.style.width = `${rect.width}px`
-        // Keep the header's height out of the usable page box.
-        const usable = rect.height - 56
-        const built = buildPages(songs, host, usable, scale)
+        // The ruler must be the width of the LYRICS, not of the stage: the
+        // page padding is not text space, and measuring it as if it were made
+        // every line wrap later than it really does.
+        host.style.width = `${usableWidth(rect.width)}px`
+        const built = buildPages(songs, host, usableHeight(rect.height), scale)
         setPages(built)
         setIndex((i) => Math.min(i, Math.max(0, built.length - 1)))
         setReady(true)
@@ -221,7 +224,10 @@ export function PerformView({
   }, [pages])
 
   return (
-    <div className="perform-root fixed inset-0 flex flex-col bg-[#0b0f16] text-white safe-pad">
+    <div
+      className="perform-root fixed inset-0 flex flex-col safe-pad"
+      style={{ background: STAGE.page, color: STAGE.ink }}
+    >
       {/* Off-screen ruler. Same width as a page, never visible. */}
       <div
         ref={measureRef}
@@ -240,8 +246,8 @@ export function PerformView({
 
       <div
         ref={stageRef}
-        className="relative min-h-0 flex-1 px-5 pt-4"
-        style={{ perspective: '2200px' }}
+        className="relative min-h-0 flex-1"
+        style={{ perspective: '2200px', padding: `${PAGE_PAD_TOP}px ${PAGE_PAD_X}px 0` }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -251,11 +257,15 @@ export function PerformView({
         }}
       >
         {!ready ? (
-          <p className="grid h-full place-items-center text-white/30">Preparando…</p>
+          <p className="grid h-full place-items-center" style={{ color: STAGE.chrome }}>
+            Preparando…
+          </p>
         ) : total === 0 ? (
           <div className="grid h-full place-items-center text-center">
             <div>
-              <p className="text-white/60">Este repertorio no tiene canciones con letra.</p>
+              <p style={{ color: STAGE.chrome }}>
+                Este repertorio no tiene canciones con letra.
+              </p>
               <Link href="/setlists" className="mt-3 inline-block text-brand underline">
                 Volver
               </Link>
@@ -264,15 +274,19 @@ export function PerformView({
         ) : (
           <>
             {/* What sits underneath the turning leaf. */}
-            <div className="absolute inset-0 px-5 pt-4">
+            <div
+              className="absolute inset-0"
+              style={{ padding: `${PAGE_PAD_TOP}px ${PAGE_PAD_X}px 0` }}
+            >
               {under ? <SongPage page={under} /> : current ? <SongPage page={current} /> : null}
             </div>
 
             {/* The leaf itself. */}
             {flip && leaf ? (
               <div
-                className="page-leaf absolute inset-0 px-5 pt-4"
+                className="page-leaf absolute inset-0"
                 style={{
+                  padding: `${PAGE_PAD_TOP}px ${PAGE_PAD_X}px 0`,
                   transformOrigin: 'left center',
                   transformStyle: 'preserve-3d',
                   transform: `rotateY(${angle}deg)`,
@@ -288,8 +302,12 @@ export function PerformView({
                 {/* The paper back of the sheet. */}
                 <div
                   aria-hidden
-                  className="absolute inset-0 bg-[#0e141d]"
-                  style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden' }}
+                  className="absolute inset-0"
+                  style={{
+                    background: STAGE.page,
+                    transform: 'rotateY(180deg)',
+                    backfaceVisibility: 'hidden',
+                  }}
                 />
                 {/* Shadow deepening as the sheet lifts. */}
                 <div
@@ -297,7 +315,7 @@ export function PerformView({
                   className="pointer-events-none absolute inset-0"
                   style={{
                     background:
-                      'linear-gradient(to left, rgba(0,0,0,0.45), rgba(0,0,0,0) 55%)',
+                      'linear-gradient(to left, rgba(15,23,42,0.28), rgba(15,23,42,0) 55%)',
                     opacity: Math.sin(Math.min(1, flip.progress) * Math.PI),
                   }}
                 />
@@ -308,14 +326,17 @@ export function PerformView({
       </div>
 
       {/* Footer: position, and the only always-visible way out. */}
-      <footer className="flex shrink-0 items-center justify-between gap-3 px-5 pb-2 pt-1 text-xs text-white/35">
-        <Link href="/setlists" className="rounded px-2 py-1 hover:text-white/70">
+      <footer
+        className="flex shrink-0 items-center justify-between gap-3 px-5 pb-2 pt-1 text-xs"
+        style={{ color: STAGE.chrome }}
+      >
+        <Link href="/setlists" className="rounded px-2 py-1">
           ‹ Salir
         </Link>
         <button
           type="button"
           onClick={() => setOverlay(true)}
-          className="truncate rounded px-2 py-1 hover:text-white/70"
+          className="truncate rounded px-2 py-1"
         >
           {setlistName}
         </button>

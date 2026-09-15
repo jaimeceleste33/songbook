@@ -2,6 +2,7 @@ import { expandFlow } from '@/lib/lyrics/parse'
 import { BLOCK_THEME } from '@/lib/lyrics/theme'
 import type { SongContent } from '@/lib/lyrics/types'
 import { FONT_MAX, FONT_MIN, fitFontSize, packPages, type FlowEntry } from './paginate'
+import { BLOCK_GAP, applyStyle, blockStyles } from './sheet'
 
 export interface PerformSong {
   id: string
@@ -24,8 +25,6 @@ export interface PerformPage {
   entries: FlowEntry[]
 }
 
-export const BLOCK_GAP = 14
-
 /** Flow entries with keys unique per position. */
 export function entriesOf(content: SongContent): FlowEntry[] {
   return expandFlow(content.blocks, content.flow).map((e, index) => ({
@@ -39,7 +38,8 @@ export function entriesOf(content: SongContent): FlowEntry[] {
  *
  * The measuring node must already be the exact width of a real page, and its
  * children must be styled identically to the rendered ones — otherwise the
- * packed heights lie and blocks overflow at performance time.
+ * packed heights lie and blocks overflow at performance time. That is why the
+ * styles come from `sheet.ts`: `SongPage` renders the very same objects.
  */
 export function measureAll(
   host: HTMLElement,
@@ -49,22 +49,26 @@ export function measureAll(
   host.style.fontSize = `${fontSize}px`
   host.replaceChildren(
     ...entries.map((entry) => {
-      const wrapper = document.createElement('div')
-      wrapper.dataset.key = entry.key
+      const styles = blockStyles(entry.block)
 
-      const tab = document.createElement('div')
-      tab.textContent = entry.block.label
-      tab.style.cssText =
-        'font-size:0.34em;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;' +
-        'margin-bottom:0.18em;line-height:1.2;'
+      const row = document.createElement('div')
+      row.dataset.key = entry.key
+      applyStyle(row, styles.row)
+
+      const strip = document.createElement('div')
+      applyStyle(strip, styles.strip)
+      const label = document.createElement('div')
+      applyStyle(label, styles.label)
+      label.textContent = entry.block.label
+      strip.append(label)
 
       const body = document.createElement('div')
+      applyStyle(body, styles.body)
       // textContent, never innerHTML: lyrics are user input.
       body.textContent = entry.block.lyrics
-      body.style.cssText = 'white-space:pre-line;line-height:1.28;font-weight:600;'
 
-      wrapper.append(tab, body)
-      return wrapper
+      row.append(strip, body)
+      return row
     }),
   )
 
@@ -133,4 +137,4 @@ export function buildPages(
   return pages
 }
 
-export { BLOCK_THEME }
+export { BLOCK_GAP, BLOCK_THEME }

@@ -39,11 +39,12 @@ export function SetlistOverlay({
   }, [])
 
   return (
+    /* The stage is light; this dark scrim carries its own text colour. */
     <div
       role="dialog"
       aria-modal="true"
       aria-label={`Canciones de ${setlistName}`}
-      className="absolute inset-0 z-40 flex flex-col bg-black/80 backdrop-blur-sm safe-pad"
+      className="absolute inset-0 z-40 flex flex-col bg-black/80 text-white backdrop-blur-sm safe-pad"
       onClick={onClose}
     >
       <div
