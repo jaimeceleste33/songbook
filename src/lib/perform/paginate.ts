@@ -68,8 +68,7 @@ export function fitFontSize(
 
   while (lo <= hi) {
     const mid = Math.floor((lo + hi) / 2)
-    const pages = packPages(entries, mid, pageHeight, measure, gap)
-    if (pages.length <= targetPages) {
+    if (fitsIn(entries, mid, pageHeight, measure, gap, targetPages)) {
       best = mid
       lo = mid + 1
     } else {
@@ -77,4 +76,24 @@ export function fitFontSize(
     }
   }
   return best
+}
+
+/**
+ * Does the song fit in `targetPages` pages at this size, with nothing spilling?
+ *
+ * The page count alone is not enough. `packPages` gives an over-tall block its
+ * own page instead of looping forever, so a song of ONE block reports "1 page"
+ * at every size — the search would then happily pick FONT_MAX and render a
+ * verse in letters taller than the screen. Every block has to actually fit.
+ */
+function fitsIn(
+  entries: FlowEntry[],
+  fontSize: number,
+  pageHeight: number,
+  measure: (entry: FlowEntry, fontSize: number) => number,
+  gap: number,
+  targetPages: number,
+): boolean {
+  if (entries.some((entry) => measure(entry, fontSize) > pageHeight)) return false
+  return packPages(entries, fontSize, pageHeight, measure, gap).length <= targetPages
 }

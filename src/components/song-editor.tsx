@@ -9,15 +9,15 @@ import { BLOCK_THEME } from '@/lib/lyrics/theme'
 import type { SongContent } from '@/lib/lyrics/types'
 import { ArrangementBuilder } from './arrangement-builder'
 
-const PLACEHOLDER = `[Verso 1]
+const PLACEHOLDER = `Verso 1
 Escribí acá la primera estrofa,
 un renglón por línea.
 
-[Coro]
+Coro
 Y acá el coro, una sola vez.
 Después lo repetís en el orden.
 
-[Verso 2]
+Verso 2
 La segunda estrofa.`
 
 export function SongEditor({
@@ -82,8 +82,8 @@ export function SongEditor({
             Pegá la letra
           </h2>
           <p className="text-xs text-muted">
-            Separá las partes con <code className="text-text">[Coro]</code>,{' '}
-            <code className="text-text">[Verso 1]</code>…
+            Poné <code className="text-text">Coro</code>,{' '}
+            <code className="text-text">Verso 1</code>… en su propio renglón
           </p>
         </div>
         <textarea

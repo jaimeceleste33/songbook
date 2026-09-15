@@ -14,20 +14,22 @@ export default function HelpPage() {
 
       <Section title="1 · Cargar una canción">
         <p>
-          Andá a <b>Librería → Nueva canción</b>, pegá la letra y separá las partes con
-          corchetes:
+          Andá a <b>Librería → Nueva canción</b>, pegá la letra y poné el nombre de cada
+          parte en su propio renglón:
         </p>
         <pre className="mt-3 overflow-x-auto rounded-xl bg-surface-2 p-4 text-xs leading-relaxed">
-{`[Verso 1]
+{`Verso 1
 El texto de la primera estrofa.
 
-[Coro]
+Coro
 El texto del coro, una sola vez.`}
         </pre>
         <p className="mt-3">
           Los nombres que la app reconoce y colorea sola: <b>Verso</b>, <b>Coro</b>,{' '}
           <b>Pre-coro</b>, <b>Puente</b>, <b>Intro</b>, <b>Final</b> y <b>Tag</b>.
-          Cualquier otro nombre también funciona, sólo que sale en gris.
+          Si usás otro nombre, escribilo entre corchetes —{' '}
+          <code>[Instrumental]</code> — para que la app sepa que es una parte y no letra.
+          Sale en gris.
         </p>
       </Section>
 

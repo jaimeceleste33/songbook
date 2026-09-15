@@ -63,8 +63,8 @@ export function ArrangementBuilder({
         <p className="mb-2 text-sm font-medium">Partes de la canción</p>
         {blocks.length === 0 ? (
           <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted">
-            Escribí la letra con encabezados como <code>[Coro]</code> y las partes
-            aparecen acá.
+            Escribí la letra con <code>Coro</code>, <code>Verso 1</code>… en su propio
+            renglón y las partes aparecen acá.
           </p>
         ) : (
           <div className="flex flex-wrap gap-2">

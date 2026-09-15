@@ -1,7 +1,31 @@
 import type { BlockKind, ParseResult, ParseWarning, SongBlock } from './types'
 
 /** A line that is only `[Something]` opens a new block. */
-const HEADER = /^\s*\[\s*([^\]]+?)\s*\]\s*$/
+const BRACKETED_HEADER = /^\s*\[\s*([^\]]+?)\s*\]\s*$/
+
+/** The part names we accept unbracketed. Kept in step with `KIND_RULES`. */
+const PART_WORDS =
+  'pre[\\s-]?coro|pre[\\s-]?chorus|coro|chorus|estribillo|refr[a\u00e1]n|refrain|' +
+  'verso|verse|estrofa|puente|bridge|intro|introducci[o\u00f3]n|final|outro|cierre|' +
+  'tag|repetir|repite|coda|remate'
+
+/**
+ * A line that is JUST a part name opens a block too — `Coro`, `Verso 2`,
+ * `Pre-coro:`, `(Puente)`. That is how lyrics sites print it and how singers
+ * type it; demanding brackets turned whole songs into a single "Intro" block.
+ *
+ * Deliberately narrow: only these words, optionally numbered, count. A lyric
+ * line is never just the word "Coro", so this cannot swallow real lyrics.
+ */
+const BARE_HEADER = new RegExp(
+  `^\\s*\\(?\\s*((?:${PART_WORDS})(?:\\s*(?:\\d{1,2}|[ivx]{1,3}))?)\\s*:?\\s*\\)?\\s*$`,
+  'i',
+)
+
+/** The label this line opens, or null if it is lyrics. */
+function matchHeader(line: string): string | null {
+  return (line.match(BRACKETED_HEADER) ?? line.match(BARE_HEADER))?.[1] ?? null
+}
 
 /**
  * Label -> kind. Spanish first: the singer writes in Spanish.
@@ -9,12 +33,12 @@ const HEADER = /^\s*\[\s*([^\]]+?)\s*\]\s*$/
  */
 const KIND_RULES: ReadonlyArray<readonly [RegExp, BlockKind]> = [
   [/\b(pre[\s-]?coro|pre[\s-]?chorus|pre)\b/i, 'prechorus'],
-  [/\b(coro|chorus|estribillo)\b/i, 'chorus'],
+  [/\b(coro|chorus|estribillo|refr[aá]n|refrain)\b/i, 'chorus'],
   [/\b(verso|verse|estrofa)\b/i, 'verse'],
   [/\b(puente|bridge)\b/i, 'bridge'],
   [/\b(intro|introducci[oó]n)\b/i, 'intro'],
   [/\b(final|outro|cierre)\b/i, 'outro'],
-  [/\b(tag|repite|coda|remate)\b/i, 'tag'],
+  [/\b(tag|repetir|repite|coda|remate)\b/i, 'tag'],
 ]
 
 export function inferKind(label: string): BlockKind {
@@ -115,10 +139,10 @@ export function parseLyrics(raw: string): ParseResult {
   }
 
   for (const line of lines) {
-    const header = line.match(HEADER)
-    if (header) {
+    const label = matchHeader(line)
+    if (label !== null) {
       flush()
-      currentLabel = header[1]
+      currentLabel = label
     } else {
       buffer.push(line)
     }

@@ -12,7 +12,7 @@ const STEPS = [
   {
     icon: '✍️',
     title: 'Cargar una canción',
-    body: 'Pegás la letra y separás las partes con corchetes. El coro lo escribís una sola vez.',
+    body: 'Pegás la letra con el nombre de cada parte en su renglón. El coro lo escribís una sola vez.',
     sample: true,
   },
   {
@@ -54,14 +54,14 @@ export function OnboardingTour() {
 
         {'sample' in current && current.sample ? (
           <pre className="mt-4 overflow-x-auto rounded-xl bg-surface-2 p-4 text-xs leading-relaxed text-muted">
-{`[Verso 1]
+{`Verso 1
 La primera estrofa, un renglón
 por cada línea que cantás.
 
-[Coro]
+Coro
 El coro, una sola vez.
 
-[Verso 2]
+Verso 2
 La segunda estrofa.`}
           </pre>
         ) : null}
