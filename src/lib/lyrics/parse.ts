@@ -1,4 +1,11 @@
 import type { BlockKind, ParseResult, ParseWarning, SongBlock } from './types'
+import {
+  matchVoiceMarker,
+  rangesOf,
+  sameVoices,
+  voicedText,
+  type VoicedLine,
+} from './voices'
 
 /** A line that is only `[Something]` opens a new block. */
 const BRACKETED_HEADER = /^\s*\[\s*([^\]]+?)\s*\]\s*$/
@@ -23,7 +30,7 @@ const BARE_HEADER = new RegExp(
 )
 
 /** The label this line opens, or null if it is lyrics. */
-function matchHeader(line: string): string | null {
+export function matchHeader(line: string): string | null {
   return (line.match(BRACKETED_HEADER) ?? line.match(BARE_HEADER))?.[1] ?? null
 }
 
@@ -58,14 +65,23 @@ function labelKey(label: string): string {
     .trim()
 }
 
-/** Trailing spaces and blank-line runs shouldn't make two blocks differ. */
-function normaliseLyrics(text: string): string {
-  return text
-    .split('\n')
-    .map((line) => line.trimEnd())
-    .join('\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
+/**
+ * Trailing spaces and blank-line runs shouldn't make two blocks differ.
+ * Works line by line, not on the joined string, so each line keeps its singer
+ * while blank runs collapse around it.
+ */
+function normaliseLines(lines: VoicedLine[]): VoicedLine[] {
+  const out: VoicedLine[] = []
+  for (const line of lines) {
+    const text = line.text.trimEnd()
+    const blank = text.trim() === ''
+    // Drop leading blanks and keep at most one blank line in a row.
+    if (blank && (out.length === 0 || out[out.length - 1].text === '')) continue
+    out.push(blank ? { text: '', singer: null } : { text, singer: line.singer })
+  }
+  while (out.length > 0 && out[out.length - 1].text === '') out.pop()
+  if (out.length > 0) out[0] = { ...out[0], text: out[0].text.trimStart() }
+  return out
 }
 
 /**
@@ -90,12 +106,17 @@ export function parseLyrics(raw: string): ParseResult {
   const byLabel = new Map<string, SongBlock[]>()
 
   let currentLabel: string | null = null
-  let buffer: string[] = []
+  /** Who sings the lines being read. Every part starts with the lead. */
+  let currentSinger: string | null = null
+  let buffer: VoicedLine[] = []
   let nextId = 1
 
   const flush = () => {
-    const lyrics = normaliseLyrics(buffer.join('\n'))
+    const lines = normaliseLines(buffer)
     buffer = []
+    currentSinger = null
+    const lyrics = lines.map((l) => l.text).join('\n')
+    const voices = rangesOf(lines)
 
     // Text before the first [Header], if it's only blank space, is not a block.
     if (currentLabel === null && lyrics === '') return
@@ -105,7 +126,7 @@ export function parseLyrics(raw: string): ParseResult {
     const existing = byLabel.get(key) ?? []
 
     // An exact re-statement of a block we already have is a repetition.
-    const same = existing.find((b) => b.lyrics === lyrics)
+    const same = existing.find((b) => b.lyrics === lyrics && sameVoices(b.voices, voices))
     if (same) {
       flow.push(same.id)
       return
@@ -132,6 +153,7 @@ export function parseLyrics(raw: string): ParseResult {
       label: finalLabel,
       kind: inferKind(label),
       lyrics,
+      ...(voices.length > 0 ? { voices } : {}),
     }
     blocks.push(block)
     byLabel.set(key, [...existing, block])
@@ -143,9 +165,14 @@ export function parseLyrics(raw: string): ParseResult {
     if (label !== null) {
       flush()
       currentLabel = label
-    } else {
-      buffer.push(line)
+      continue
     }
+    const voice = matchVoiceMarker(line)
+    if (voice !== undefined) {
+      currentSinger = voice
+      continue
+    }
+    buffer.push({ text: line, singer: currentSinger })
   }
   flush()
 
@@ -178,7 +205,7 @@ export function serialiseSong(blocks: SongBlock[], flow: string[]): string {
     .map(({ block }) => {
       if (emitted.has(block.id)) return `[${block.label}]`
       emitted.add(block.id)
-      return `[${block.label}]\n${block.lyrics}`
+      return `[${block.label}]\n${voicedText(block)}`
     })
     .join('\n\n')
 }

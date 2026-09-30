@@ -19,9 +19,11 @@ type Flip = { dir: 'next' | 'prev'; progress: number; animating: boolean }
 export function PerformView({
   setlistName,
   songs,
+  singers,
 }: {
   setlistName: string
   songs: PerformSong[]
+  singers: string[]
 }) {
   const stageRef = useRef<HTMLDivElement>(null)
   const measureRef = useRef<HTMLDivElement>(null)
@@ -71,7 +73,7 @@ export function PerformView({
         // page padding is not text space, and measuring it as if it were made
         // every line wrap later than it really does.
         host.style.width = `${usableWidth(rect.width)}px`
-        const built = buildPages(songs, host, usableHeight(rect.height), scale)
+        const built = buildPages(songs, host, usableHeight(rect.height), scale, singers)
         setPages(built)
         setIndex((i) => Math.min(i, Math.max(0, built.length - 1)))
         setReady(true)
@@ -85,7 +87,7 @@ export function PerformView({
       observer.disconnect()
       cancelAnimationFrame(frame)
     }
-  }, [songs, scale])
+  }, [songs, scale, singers])
 
   const total = pages.length
   const canNext = index < total - 1

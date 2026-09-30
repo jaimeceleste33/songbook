@@ -2,7 +2,7 @@ import { expandFlow } from '@/lib/lyrics/parse'
 import { BLOCK_THEME } from '@/lib/lyrics/theme'
 import type { SongContent } from '@/lib/lyrics/types'
 import { FONT_MAX, FONT_MIN, fitFontSize, packPages, type FlowEntry } from './paginate'
-import { BLOCK_GAP, applyStyle, blockStyles } from './sheet'
+import { BLOCK_GAP, applyStyle, blockStyles, segmentViews } from './sheet'
 
 export interface PerformSong {
   id: string
@@ -23,6 +23,8 @@ export interface PerformPage {
   pagesInSong: number
   fontSize: number
   entries: FlowEntry[]
+  /** The singer roster, in order: it decides each singer's colour. */
+  singers: string[]
 }
 
 /** Flow entries with keys unique per position. */
@@ -45,6 +47,7 @@ export function measureAll(
   host: HTMLElement,
   entries: FlowEntry[],
   fontSize: number,
+  singers: string[],
 ): Map<string, number> {
   host.style.fontSize = `${fontSize}px`
   host.replaceChildren(
@@ -64,8 +67,22 @@ export function measureAll(
 
       const body = document.createElement('div')
       applyStyle(body, styles.body)
-      // textContent, never innerHTML: lyrics are user input.
-      body.textContent = entry.block.lyrics
+      // textContent, never innerHTML: lyrics and names are user input.
+      for (const view of segmentViews(entry.block, singers)) {
+        const box = document.createElement('div')
+        applyStyle(box, view.box)
+        if (view.singer !== null) {
+          const tag = document.createElement('div')
+          applyStyle(tag, view.tag)
+          tag.textContent = view.singer
+          box.append(tag)
+        }
+        const text = document.createElement('div')
+        applyStyle(text, view.body)
+        text.textContent = view.text
+        box.append(text)
+        body.append(box)
+      }
 
       row.append(strip, body)
       return row
@@ -91,6 +108,7 @@ export function buildPages(
   host: HTMLElement,
   pageHeight: number,
   scale: number,
+  singers: string[],
 ): PerformPage[] {
   const pages: PerformPage[] = []
   const min = Math.round(FONT_MIN * scale)
@@ -104,7 +122,7 @@ export function buildPages(
     const measure = (entry: FlowEntry, fontSize: number) => {
       let level = cache.get(fontSize)
       if (!level) {
-        level = measureAll(host, entries, fontSize)
+        level = measureAll(host, entries, fontSize, singers)
         cache.set(fontSize, level)
       }
       return level.get(entry.key) ?? 0
@@ -130,6 +148,7 @@ export function buildPages(
         pagesInSong: packed.length,
         fontSize,
         entries: pageEntries,
+        singers,
       })
     })
   })

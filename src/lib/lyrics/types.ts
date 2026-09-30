@@ -26,6 +26,22 @@ export interface SongBlock {
   label: string
   kind: BlockKind
   lyrics: string
+  /**
+   * Lines someone other than the lead sings. Absent means the lead sings the
+   * whole part — only the exceptions are marked, so the sheet stays quiet.
+   */
+  voices?: VoiceRange[]
+}
+
+/**
+ * A run of lines inside `lyrics` that belongs to another singer.
+ * `from` is inclusive, `to` exclusive, both indices into `lyrics.split('\n')`.
+ * Ranges are sorted, never overlap, and never start or end on a blank line.
+ */
+export interface VoiceRange {
+  singer: string
+  from: number
+  to: number
 }
 
 export interface SongContent {
@@ -36,7 +52,7 @@ export interface SongContent {
 
 /**
  * Raised by the parser when the same label shows up twice with different
- * text. We never drop the second one — it becomes its own block — but the
+ * text (or the same text split between different voices). We never drop the second one — it becomes its own block — but the
  * editor surfaces this so the singer can merge them if it was a typo.
  */
 export interface ParseWarning {

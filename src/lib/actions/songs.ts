@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth'
 import * as q from '@/lib/db/queries'
 import type { SongContent } from '@/lib/lyrics/types'
+import { mergeSingers, sanitiseVoices, singersIn } from '@/lib/lyrics/voices'
 
 export type SongFormState = { error?: string }
 
@@ -15,7 +16,8 @@ function parseContent(raw: string): SongContent | null {
     if (!Array.isArray(parsed.blocks) || !Array.isArray(parsed.flow)) return null
     const ids = new Set(parsed.blocks.map((b) => b.id))
     return {
-      blocks: parsed.blocks,
+      // `undefined` voices vanish in the JSON, so unvoiced parts stay as before.
+      blocks: parsed.blocks.map((b) => ({ ...b, voices: sanitiseVoices(b) })),
       // Drop references to blocks the singer deleted.
       flow: parsed.flow.filter((id) => ids.has(id)),
     }
@@ -48,6 +50,11 @@ export async function saveSong(
   } else {
     await q.createSong({ title, artist, songKey, content })
   }
+
+  // A singer named for the first time joins the roster and gets her colour.
+  const roster = await q.getSingers()
+  const merged = mergeSingers(roster, singersIn(content.blocks))
+  if (merged.length > roster.length) await q.setSingers(merged)
 
   revalidatePath('/library')
   redirect('/library')

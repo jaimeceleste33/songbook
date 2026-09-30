@@ -39,8 +39,25 @@ export const STAGE = {
   titleInk: '#ffffff',
   /** The lyrics themselves. Near-black, not pure black: less glare on stage. */
   ink: '#111827',
+  /** Lines another singer sings. Still readable, clearly not hers to lead. */
+  otherInk: '#4b5563',
   /** Footer, page numbers, everything that is not the song. */
   chrome: '#64748b',
 } as const
+
+/**
+ * Colours for the other singers, handed out in roster order. Deliberately not
+ * the part colours above: the part owns the strip, the singer owns the bar
+ * beside her lines, and the NAME is what carries the meaning — colour only
+ * helps. Every one of these keeps white text above 4.5:1 for the name tag.
+ */
+export const SINGER_COLORS = [
+  '#be185d', // pink
+  '#0e7490', // cyan
+  '#a16207', // amber
+  '#4d7c0f', // olive
+  '#86198f', // plum
+  '#115e59', // deep teal
+] as const
 
 export const BLOCK_KINDS = Object.keys(BLOCK_THEME) as BlockKind[]

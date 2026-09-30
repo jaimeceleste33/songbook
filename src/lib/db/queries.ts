@@ -176,3 +176,18 @@ export async function setSetting(key: string, value: unknown) {
 }
 
 export const ONBOARDING_KEY = 'onboarding_completed'
+
+/**
+ * Everyone who sings besides the lead, in the order they first appeared. The
+ * order IS the colour assignment, so names are only ever appended.
+ */
+const SINGERS_KEY = 'singers'
+
+export async function getSingers(): Promise<string[]> {
+  const value = await getSetting<unknown>(SINGERS_KEY)
+  return Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : []
+}
+
+export async function setSingers(singers: string[]) {
+  await setSetting(SINGERS_KEY, singers)
+}

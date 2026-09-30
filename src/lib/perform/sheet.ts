@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react'
 import { BLOCK_THEME, STAGE } from '@/lib/lyrics/theme'
 import type { SongBlock } from '@/lib/lyrics/types'
+import { lyricSegments, singerColor } from '@/lib/lyrics/voices'
 
 /**
  * The sheet: how one part is drawn, and how much room the lyrics get.
@@ -92,6 +93,83 @@ export function blockStyles(block: SongBlock): BlockStyles {
       color: STAGE.ink,
     },
   }
+}
+
+/** Line height of the lyrics, reused as the height of one blank line. */
+const LINE = '1.28em'
+
+/**
+ * One stretch of a part. `box` wraps it; `tag` is the singer's name, drawn
+ * only for someone else's lines; `text` holds the lyrics.
+ */
+export interface SegmentView {
+  key: string
+  text: string
+  /** Name on the tag, or null for the lead's own lines. */
+  singer: string | null
+  box: CSSProperties
+  tag: CSSProperties
+  body: CSSProperties
+}
+
+/**
+ * The body of a part, split by who sings it. `SongPage` and `measureAll` both
+ * draw exactly this list, so a voiced part measures as tall as it renders.
+ *
+ * Someone else's lines get three cues at once, because on stage one glance has
+ * to be enough and colour alone is not (the part already owns the colour):
+ * her NAME on a tag, a bar in her colour down the side, and slightly softer
+ * ink — still readable, visibly not the lead's to sing.
+ */
+export function segmentViews(block: SongBlock, singers: string[]): SegmentView[] {
+  return lyricSegments(block).map((segment, i) => {
+    const gap = segment.gapBefore ? LINE : undefined
+    if (segment.singer === null) {
+      return {
+        key: `s${i}`,
+        text: segment.text,
+        singer: null,
+        box: { marginTop: gap },
+        tag: {},
+        body: {},
+      }
+    }
+
+    const color = singerColor(segment.singer, singers)
+    return {
+      key: `s${i}`,
+      text: segment.text,
+      singer: segment.singer,
+      box: {
+        marginTop: gap ?? '0.18em',
+        marginBottom: '0.18em',
+        borderLeft: `clamp(4px, 0.16em, 9px) solid ${color}`,
+        borderRadius: '0 4px 4px 0',
+        // Hex alpha: the singer's colour at ~10%, over the part's tint.
+        background: `${color}1a`,
+        padding: '0.14em 0.4em 0.18em 0.45em',
+      },
+      tag: {
+        display: 'block',
+        width: 'fit-content',
+        maxWidth: '100%',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        fontSize: 'clamp(11px, 0.4em, 22px)',
+        fontWeight: 800,
+        letterSpacing: '0.08em',
+        textTransform: 'uppercase',
+        lineHeight: 1.3,
+        color: '#ffffff',
+        background: color,
+        borderRadius: '999px',
+        padding: '0.1em 0.7em',
+        marginBottom: '0.2em',
+      },
+      body: { color: STAGE.otherInk },
+    }
+  })
 }
 
 /** Apply a style object to a real node, for the off-screen ruler. */

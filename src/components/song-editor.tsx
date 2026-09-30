@@ -2,11 +2,12 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState } from 'react'
 import { saveSong, type SongFormState } from '@/lib/actions/songs'
-import { parseLyrics } from '@/lib/lyrics/parse'
+import { matchHeader, parseLyrics } from '@/lib/lyrics/parse'
 import { reconcileFlow, unusedBlocks } from '@/lib/lyrics/reconcile'
 import { serialiseSong } from '@/lib/lyrics/parse'
 import { BLOCK_THEME } from '@/lib/lyrics/theme'
 import type { SongContent } from '@/lib/lyrics/types'
+import { lyricSegments, mergeSingers, singerColor, singersIn } from '@/lib/lyrics/voices'
 import { ArrangementBuilder } from './arrangement-builder'
 
 const PLACEHOLDER = `Verso 1
@@ -20,8 +21,34 @@ Después lo repetís en el orden.
 Verso 2
 La segunda estrofa.`
 
+/**
+ * Wraps the lines under the selection (or the caret's line) in `{name}` … `{}`.
+ * Part names at the top of the selection are skipped: a marker above a part
+ * name would end at that name and mark nothing.
+ */
+function wrapInVoice(value: string, selStart: number, selEnd: number, name: string) {
+  let start = value.lastIndexOf('\n', selStart - 1) + 1
+  // A selection that ends right after a line break stops at the line above.
+  const last = selEnd > selStart && value[selEnd - 1] === '\n' ? selEnd - 1 : selEnd
+  const lineEnd = value.indexOf('\n', last)
+  const end = lineEnd === -1 ? value.length : lineEnd
+
+  while (start < end) {
+    const next = value.indexOf('\n', start)
+    const stop = next === -1 || next > end ? end : next
+    if (matchHeader(value.slice(start, stop)) === null) break
+    start = stop + 1
+  }
+  if (start >= end) return null
+
+  const open = `{${name}}\n`
+  const next = value.slice(0, start) + open + value.slice(start, end) + '\n{}' + value.slice(end)
+  return { next, caret: end + open.length }
+}
+
 export function SongEditor({
   song,
+  singers,
 }: {
   song?: {
     id: string
@@ -30,9 +57,12 @@ export function SongEditor({
     songKey: string | null
     content: SongContent
   }
+  /** The saved roster: its order is every singer's colour. */
+  singers: string[]
 }) {
   const [state, action, pending] = useActionState<SongFormState, FormData>(saveSong, {})
 
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [raw, setRaw] = useState(() =>
     song ? serialiseSong(song.content.blocks, song.content.flow) : '',
   )
@@ -58,6 +88,20 @@ export function SongEditor({
     () => unusedBlocks(content.blocks, content.flow),
     [content],
   )
+  // Saved singers first, so their colours match the stage; new names after.
+  const roster = useMemo(
+    () => mergeSingers(singers, singersIn(content.blocks)),
+    [singers, content.blocks],
+  )
+
+  const markVoice = (name: string) => {
+    const el = textareaRef.current
+    if (!el) return
+    const result = wrapInVoice(el.value, el.selectionStart, el.selectionEnd, name)
+    if (!result) return
+    setRaw(result.next)
+    requestAnimationFrame(() => el.setSelectionRange(result.caret, result.caret))
+  }
 
   return (
     <form action={action} className="space-y-6">
@@ -86,7 +130,9 @@ export function SongEditor({
             <code className="text-text">Verso 1</code>… en su propio renglón
           </p>
         </div>
+        <VoiceBar roster={roster} onPick={markVoice} />
         <textarea
+          ref={textareaRef}
           value={raw}
           onChange={(e) => setRaw(e.target.value)}
           rows={14}
@@ -99,7 +145,7 @@ export function SongEditor({
           <ul className="mt-2 space-y-1">
             {warnings.map((w, i) => (
               <li key={i} className="rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
-                Escribiste <b>[{w.label}]</b> dos veces con texto distinto. Guardamos la
+                Escribiste <b>[{w.label}]</b> dos veces con texto o voces distintas. Guardamos la
                 segunda como <b>{w.createdLabel}</b> para no perderla — si fue un error,
                 dejá las dos iguales y se unen solas.
               </li>
@@ -132,7 +178,7 @@ export function SongEditor({
       {content.flow.length > 0 ? (
         <section>
           <h2 className="mb-2 font-medium">Vista previa</h2>
-          <Preview content={content} />
+          <Preview content={content} roster={roster} />
         </section>
       ) : null}
 
@@ -185,7 +231,83 @@ function Field({
   )
 }
 
-function Preview({ content }: { content: SongContent }) {
+/**
+ * One tap per singer instead of typing braces: on the iPad keyboard `{` sits
+ * two layers deep. What it writes is plain text the singer can read and fix.
+ */
+function VoiceBar({ roster, onPick }: { roster: string[]; onPick: (name: string) => void }) {
+  const [adding, setAdding] = useState(false)
+  const [draft, setDraft] = useState('')
+
+  const addNew = () => {
+    const name = draft.trim().replace(/[{}]/g, '')
+    if (name) onPick(name)
+    setDraft('')
+    setAdding(false)
+  }
+
+  return (
+    <div className="mb-2 rounded-2xl border border-border bg-surface-2 px-3 py-2.5">
+      <p className="mb-2 text-xs text-muted">
+        ¿Unas líneas las canta otra persona? Seleccionalas y tocá su nombre. Lo que no
+        marques es tuyo.
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        {roster.map((name) => (
+          <button
+            key={name}
+            type="button"
+            // Keep the textarea's selection: the tap must not steal focus.
+            onPointerDown={(e) => e.preventDefault()}
+            onClick={() => onPick(name)}
+            className="rounded-full px-3 py-1.5 text-sm font-semibold text-white transition active:scale-95"
+            style={{ background: singerColor(name, roster) }}
+          >
+            {name}
+          </button>
+        ))}
+        {adding ? (
+          <span className="flex items-center gap-1.5">
+            <input
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  addNew()
+                } else if (e.key === 'Escape') {
+                  setAdding(false)
+                }
+              }}
+              autoFocus
+              maxLength={40}
+              placeholder="Nombre"
+              className="w-32 rounded-full border border-border bg-surface px-3 py-1.5 text-sm outline-none focus:border-brand"
+            />
+            <button
+              type="button"
+              onClick={addNew}
+              className="rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-white"
+            >
+              Marcar
+            </button>
+          </span>
+        ) : (
+          <button
+            type="button"
+            onPointerDown={(e) => e.preventDefault()}
+            onClick={() => setAdding(true)}
+            className="rounded-full border border-dashed border-border px-3 py-1.5 text-sm text-muted hover:text-text"
+          >
+            + Otra voz
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function Preview({ content, roster }: { content: SongContent; roster: string[] }) {
   const byId = new Map(content.blocks.map((b) => [b.id, b]))
   return (
     <div className="overflow-hidden rounded-2xl border border-border">
@@ -201,12 +323,33 @@ function Preview({ content }: { content: SongContent }) {
             >
               {block.label}
             </div>
-            <p
+            <div
               className="flex-1 whitespace-pre-line px-4 py-3 text-sm leading-relaxed"
               style={{ background: theme.accent }}
             >
-              {block.lyrics}
-            </p>
+              {lyricSegments(block).map((segment, i) => {
+                const gap = segment.gapBefore ? 'mt-[1.625em]' : ''
+                if (segment.singer === null) {
+                  return <p key={i} className={gap}>{segment.text}</p>
+                }
+                const color = singerColor(segment.singer, roster)
+                return (
+                  <div
+                    key={i}
+                    className={`my-1 rounded-r border-l-4 py-1 pl-3 text-muted ${gap}`}
+                    style={{ borderColor: color, background: `${color}26` }}
+                  >
+                    <span
+                      className="mb-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white"
+                      style={{ background: color }}
+                    >
+                      {segment.singer}
+                    </span>
+                    <p>{segment.text}</p>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )
       })}

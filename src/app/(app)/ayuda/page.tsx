@@ -33,6 +33,30 @@ El texto del coro, una sola vez.`}
         </p>
       </Section>
 
+      <Section title="Marcar quién canta cada parte">
+        <p>
+          Si unas líneas las canta otra persona, seleccionalas en el texto y tocá su nombre
+          arriba del cuadro (o <b>+ Otra voz</b> la primera vez). La app escribe esto por
+          vos, y también lo podés tipear a mano:
+        </p>
+        <pre className="mt-3 overflow-x-auto rounded-xl bg-surface-2 p-4 text-xs leading-relaxed">
+{`Coro
+Esta línea es tuya
+{Mili}
+Estas dos
+las canta Mili
+{}
+Esta vuelve a ser tuya`}
+        </pre>
+        <p className="mt-3">
+          <code>{'{Nombre}'}</code> abre y <code>{'{}'}</code> cierra. Si no cerrás, sigue
+          hasta el final de la parte — así, poniéndolo justo debajo de <b>Coro</b>, marcás
+          el coro entero. Para todas juntas, <code>{'{Todas}'}</code>. Lo que no marques es
+          tuyo. En el escenario, esas líneas salen con el nombre arriba y una barra de
+          color al costado, y cada persona tiene siempre el mismo color.
+        </p>
+      </Section>
+
       <Section title="2 · Armar el orden">
         <p>
           Abajo del texto aparecen las partes que escribiste. Tocalas en el orden en que

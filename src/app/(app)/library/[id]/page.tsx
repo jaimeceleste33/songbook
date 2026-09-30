@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { SongEditor } from '@/components/song-editor'
 import { removeSong } from '@/lib/actions/songs'
-import { getSong } from '@/lib/db/queries'
+import { getSingers, getSong } from '@/lib/db/queries'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,7 +12,7 @@ export default async function EditSongPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const song = await getSong(id)
+  const [song, singers] = await Promise.all([getSong(id), getSingers()])
   if (!song) notFound()
 
   return (
@@ -42,6 +42,7 @@ export default async function EditSongPage({
           songKey: song.songKey,
           content: song.content,
         }}
+        singers={singers}
       />
     </div>
   )

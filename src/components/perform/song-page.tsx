@@ -7,6 +7,7 @@ import {
   HEADER_GAP,
   HEADER_H,
   blockStyles,
+  segmentViews,
 } from '@/lib/perform/sheet'
 
 /**
@@ -55,7 +56,14 @@ export function SongPage({ page }: { page: PerformPage }) {
               <div style={styles.strip}>
                 <div style={styles.label}>{entry.block.label}</div>
               </div>
-              <div style={styles.body}>{entry.block.lyrics}</div>
+              <div style={styles.body}>
+                {segmentViews(entry.block, page.singers).map((view) => (
+                  <div key={view.key} style={view.box}>
+                    {view.singer !== null ? <div style={view.tag}>{view.singer}</div> : null}
+                    <div style={view.body}>{view.text}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           )
         })}

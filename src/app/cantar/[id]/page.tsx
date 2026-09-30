@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import { PerformView } from '@/components/perform/perform-view'
 import { requireAuth } from '@/lib/auth'
-import { getSetlistWithSongs } from '@/lib/db/queries'
+import { getSetlistWithSongs, getSingers } from '@/lib/db/queries'
 import type { PerformSong } from '@/lib/perform/layout'
 
 export const dynamic = 'force-dynamic'
@@ -19,7 +19,7 @@ export default async function PerformPage({
 }) {
   await requireAuth()
   const { id } = await params
-  const list = await getSetlistWithSongs(id)
+  const [list, singers] = await Promise.all([getSetlistWithSongs(id), getSingers()])
   if (!list) notFound()
 
   const songs: PerformSong[] = list.items.map((item) => ({
@@ -30,5 +30,5 @@ export default async function PerformPage({
     content: item.song.content,
   }))
 
-  return <PerformView setlistName={list.name} songs={songs} />
+  return <PerformView setlistName={list.name} songs={songs} singers={singers} />
 }
