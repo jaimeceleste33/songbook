@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react'
 import { AccessError, AccessField, AccessSubmit } from '@/components/access/access-shell'
+import { PasswordField } from '@/components/access/password-field'
 import { login, type LoginState } from '@/lib/auth/actions'
 
 export function LoginForm() {
@@ -17,15 +18,15 @@ export function LoginForm() {
         autoCapitalize="none"
         autoFocus
         required
+        placeholder="tu@email.com"
         defaultValue={state.email}
       />
-      <AccessField
+      <PasswordField
         label="Contraseña"
         name="password"
-        type="password"
         autoComplete="current-password"
         required
-        placeholder="••••••••"
+        placeholder="Tu contraseña"
       />
       <AccessError message={state.error} />
       <AccessSubmit pending={pending}>Entrar</AccessSubmit>

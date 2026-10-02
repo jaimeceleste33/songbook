@@ -1,7 +1,8 @@
 'use client'
 
 import { useActionState } from 'react'
-import { AccessError, AccessField, AccessSubmit } from '@/components/access/access-shell'
+import { AccessError, AccessSubmit } from '@/components/access/access-shell'
+import { PasswordField } from '@/components/access/password-field'
 import { setNewPassword, type AccessState } from '@/lib/actions/access'
 import { MIN_PASSWORD_LENGTH } from '@/lib/auth/password-rules'
 
@@ -11,11 +12,11 @@ export function NewPasswordForm({ token }: { token: string }) {
   return (
     <form action={action} className="rounded-2xl border border-border bg-surface p-6">
       <input type="hidden" name="token" value={token} />
-      <AccessField
+      <PasswordField
         label="Contraseña nueva"
         name="password"
-        type="password"
         autoComplete="new-password"
+        placeholder="Elegí una contraseña"
         autoFocus
         required
         minLength={MIN_PASSWORD_LENGTH}

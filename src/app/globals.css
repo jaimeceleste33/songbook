@@ -51,3 +51,24 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .page-leaf { transition: none !important; }
 }
+
+/*
+ * The welcome on the login, invitation and new-password pages: the note
+ * settles in, then the card rises after it. Short on purpose — it plays
+ * every time someone signs in.
+ */
+@keyframes note-in {
+  0% { opacity: 0; transform: translateY(6px) scale(0.85) rotate(-8deg); }
+  60% { opacity: 1; transform: translateY(-2px) scale(1.06) rotate(3deg); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.welcome-note { animation: note-in 650ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.welcome-rise { animation: rise-in 500ms ease-out 150ms both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-note, .welcome-rise { animation: none; }
+}
