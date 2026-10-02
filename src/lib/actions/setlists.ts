@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { requireAuth } from '@/lib/auth'
+import { requirePermission } from '@/lib/auth'
 import * as q from '@/lib/db/queries'
 
 export type SetlistFormState = { error?: string }
@@ -17,55 +17,56 @@ export async function createSetlist(
   _prev: SetlistFormState,
   formData: FormData,
 ): Promise<SetlistFormState> {
-  await requireAuth()
+  const { bandId } = await requirePermission('content:edit')
   const name = String(formData.get('name') ?? '').trim()
   if (!name) return { error: 'Poné un nombre al repertorio.' }
 
-  const id = await q.createSetlist(name, parseDate(String(formData.get('serviceDate') ?? '')))
+  const id = await q.createSetlist(bandId, name, parseDate(String(formData.get('serviceDate') ?? '')))
   revalidatePath('/setlists')
   redirect(`/setlists/${id}`)
 }
 
 export async function renameSetlist(formData: FormData): Promise<void> {
-  await requireAuth()
+  const { bandId } = await requirePermission('content:edit')
   const id = String(formData.get('id') ?? '')
   const name = String(formData.get('name') ?? '').trim()
   if (!id || !name) return
-  await q.renameSetlist(id, name, parseDate(String(formData.get('serviceDate') ?? '')))
+  await q.renameSetlist(bandId, id, name, parseDate(String(formData.get('serviceDate') ?? '')))
   revalidatePath(`/setlists/${id}`)
 }
 
+/** To the trash, never gone: an admin can restore it from /papelera. */
 export async function removeSetlist(formData: FormData): Promise<void> {
-  await requireAuth()
+  const { bandId } = await requirePermission('content:delete')
   const id = String(formData.get('id') ?? '')
   if (id) {
-    await q.deleteSetlist(id)
-    revalidatePath('/setlists')
+    await q.trashSetlist(bandId, id)
+    revalidatePath('/', 'layout')
   }
   redirect('/setlists')
 }
 
 export async function addSong(formData: FormData): Promise<void> {
-  await requireAuth()
+  const { bandId } = await requirePermission('content:edit')
   const setlistId = String(formData.get('setlistId') ?? '')
   const songId = String(formData.get('songId') ?? '')
   if (!setlistId || !songId) return
-  await q.addSongToSetlist(setlistId, songId)
+  await q.addSongToSetlist(bandId, setlistId, songId)
   revalidatePath(`/setlists/${setlistId}`)
 }
 
 export async function removeItem(formData: FormData): Promise<void> {
-  await requireAuth()
+  const { bandId } = await requirePermission('content:edit')
   const setlistId = String(formData.get('setlistId') ?? '')
   const itemId = String(formData.get('itemId') ?? '')
   if (!setlistId || !itemId) return
-  await q.removeSetlistItem(setlistId, itemId)
+  await q.removeSetlistItem(bandId, setlistId, itemId)
   revalidatePath(`/setlists/${setlistId}`)
 }
 
 /** Called by the drag-and-drop list after a reorder. */
 export async function reorderSetlist(setlistId: string, songIds: string[]): Promise<void> {
-  await requireAuth()
-  await q.setSetlistSongs(setlistId, songIds)
+  const { bandId } = await requirePermission('content:edit')
+  await q.setSetlistSongs(bandId, setlistId, songIds)
   revalidatePath(`/setlists/${setlistId}`)
 }

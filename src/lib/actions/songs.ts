@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { requireAuth } from '@/lib/auth'
+import { requirePermission } from '@/lib/auth'
 import * as q from '@/lib/db/queries'
 import type { SongContent } from '@/lib/lyrics/types'
 import { mergeSingers, sanitiseVoices, singersIn } from '@/lib/lyrics/voices'
@@ -30,7 +30,7 @@ export async function saveSong(
   _prev: SongFormState,
   formData: FormData,
 ): Promise<SongFormState> {
-  await requireAuth()
+  const { bandId } = await requirePermission('content:edit')
 
   const id = String(formData.get('id') ?? '').trim()
   const title = String(formData.get('title') ?? '').trim()
@@ -46,26 +46,30 @@ export async function saveSong(
   }
 
   if (id) {
-    await q.updateSong(id, { title, artist, songKey, content })
+    const saved = await q.updateSong(bandId, id, { title, artist, songKey, content })
+    if (!saved) {
+      return { error: 'Esta canción ya no está en la librería (¿la mandaron a la papelera?).' }
+    }
   } else {
-    await q.createSong({ title, artist, songKey, content })
+    await q.createSong(bandId, { title, artist, songKey, content })
   }
 
-  // A singer named for the first time joins the roster and gets her colour.
-  const roster = await q.getSingers()
+  // A singer named for the first time joins the roster and gets their colour.
+  const roster = await q.getSingers(bandId)
   const merged = mergeSingers(roster, singersIn(content.blocks))
-  if (merged.length > roster.length) await q.setSingers(merged)
+  if (merged.length > roster.length) await q.setSingers(bandId, merged)
 
   revalidatePath('/library')
   redirect('/library')
 }
 
+/** To the trash, never gone: an admin can restore it from /papelera. */
 export async function removeSong(formData: FormData): Promise<void> {
-  await requireAuth()
+  const { bandId } = await requirePermission('content:delete')
   const id = String(formData.get('id') ?? '')
   if (id) {
-    await q.deleteSong(id)
-    revalidatePath('/library')
+    await q.trashSong(bandId, id)
+    revalidatePath('/', 'layout')
   }
   redirect('/library')
 }

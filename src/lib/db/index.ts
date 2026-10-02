@@ -36,8 +36,19 @@ function connect(): NodePgDatabase<typeof schema> {
       ssl: /localhost|127\.0\.0\.1/.test(url) ? false : { rejectUnauthorized: true },
     })
 
-  // Survive hot reload in dev, which would otherwise leak a pool per edit.
-  if (process.env.NODE_ENV !== 'production') globalForDb.songbookPool = pool
+  // Kept on globalThis in every environment. In dev this survives hot reload;
+  // in production it is what makes the pool a pool at all — without it every
+  // property access below built a new one, and connections piled up until
+  // Postgres refused new clients.
+  globalForDb.songbookPool = pool
+
+  // The server may close an idle connection (Neon does when it scales to
+  // zero). node-postgres reports that as an 'error' event on the pool, and
+  // with no listener it becomes an uncaught exception. The pool replaces the
+  // client on the next query, so logging is all there is to do.
+  if (pool.listenerCount('error') === 0) {
+    pool.on('error', (error) => console.warn('Idle database connection closed:', error.message))
+  }
 
   return drizzle(pool, { schema })
 }
@@ -45,8 +56,7 @@ function connect(): NodePgDatabase<typeof schema> {
 /** Proxy so `db.select()` connects on first use instead of at import. */
 export const db = new Proxy({} as NodePgDatabase<typeof schema>, {
   get(_target, property, receiver) {
-    const instance = globalForDb.songbookDb ?? connect()
-    if (process.env.NODE_ENV !== 'production') globalForDb.songbookDb = instance
+    const instance = (globalForDb.songbookDb ??= connect())
     return Reflect.get(instance, property, receiver)
   },
 })

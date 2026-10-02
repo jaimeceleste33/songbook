@@ -1,0 +1,38 @@
+'use client'
+
+import { useActionState } from 'react'
+import { AccessError, AccessField, AccessSubmit } from '@/components/access/access-shell'
+import { acceptInvitation, type AccessState } from '@/lib/actions/access'
+import { MIN_PASSWORD_LENGTH } from '@/lib/auth/password-rules'
+
+export function InvitationForm({ token }: { token: string }) {
+  const [state, action, pending] = useActionState<AccessState, FormData>(acceptInvitation, {})
+
+  return (
+    <form action={action} className="rounded-2xl border border-border bg-surface p-6">
+      <input type="hidden" name="token" value={token} />
+      <AccessField label="Tu nombre" name="name" autoComplete="name" autoFocus defaultValue={state.name} />
+      <AccessField
+        label="Email"
+        name="email"
+        type="email"
+        autoComplete="username"
+        autoCapitalize="none"
+        required
+        defaultValue={state.email}
+        hint="Es con lo que vas a entrar."
+      />
+      <AccessField
+        label="Contraseña"
+        name="password"
+        type="password"
+        autoComplete="new-password"
+        required
+        minLength={MIN_PASSWORD_LENGTH}
+        hint={`Al menos ${MIN_PASSWORD_LENGTH} caracteres. Si ya tenés usuario, poné la de siempre.`}
+      />
+      <AccessError message={state.error} />
+      <AccessSubmit pending={pending}>Crear mi usuario</AccessSubmit>
+    </form>
+  )
+}

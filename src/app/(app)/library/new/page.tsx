@@ -1,12 +1,14 @@
 import Link from 'next/link'
 import { SongEditor } from '@/components/song-editor'
+import { requirePagePermission } from '@/lib/auth'
 import { getSingers } from '@/lib/db/queries'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Nueva canción · Songbook' }
 
 export default async function NewSongPage() {
-  const singers = await getSingers()
+  const { bandId } = await requirePagePermission('content:edit')
+  const singers = await getSingers(bandId)
   return (
     <div>
       <Link href="/library" className="mb-4 inline-block text-sm text-muted hover:text-text">

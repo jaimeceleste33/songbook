@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { requireMember } from '@/lib/auth'
+import { can } from '@/lib/auth/permissions'
 import { listSetlists } from '@/lib/db/queries'
 import { NewSetlistForm } from '@/components/new-setlist-form'
 
@@ -12,7 +14,9 @@ const dateFormat = new Intl.DateTimeFormat('es-AR', {
 })
 
 export default async function SetlistsPage() {
-  const lists = await listSetlists()
+  const { bandId, role } = await requireMember()
+  const canEdit = can(role, 'content:edit')
+  const lists = await listSetlists(bandId)
 
   return (
     <div>
@@ -23,15 +27,16 @@ export default async function SetlistsPage() {
         </p>
       </div>
 
-      <NewSetlistForm />
+      {canEdit ? <NewSetlistForm /> : null}
 
       {lists.length === 0 ? (
         <div className="mt-4 rounded-2xl border border-dashed border-border bg-surface/50 px-6 py-14 text-center">
           <p className="text-4xl">📋</p>
-          <p className="mt-3 font-medium">Todavía no armaste ningún repertorio</p>
+          <p className="mt-3 font-medium">Todavía no hay repertorios</p>
           <p className="mx-auto mt-1 max-w-sm text-sm text-muted">
-            Creá uno arriba, elegí las canciones en el orden que las vas a cantar, y el
-            día que toque abrís el modo cantar.
+            {canEdit
+              ? 'Creá uno arriba, elegí las canciones en el orden que las vas a cantar, y el día que toque abrís el modo cantar.'
+              : 'Cuando alguien de la banda arme uno, lo vas a ver acá.'}
           </p>
         </div>
       ) : (

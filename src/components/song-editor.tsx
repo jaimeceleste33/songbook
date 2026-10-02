@@ -5,10 +5,10 @@ import { saveSong, type SongFormState } from '@/lib/actions/songs'
 import { matchHeader, parseLyrics } from '@/lib/lyrics/parse'
 import { reconcileFlow, unusedBlocks } from '@/lib/lyrics/reconcile'
 import { serialiseSong } from '@/lib/lyrics/parse'
-import { BLOCK_THEME } from '@/lib/lyrics/theme'
 import type { SongContent } from '@/lib/lyrics/types'
-import { lyricSegments, mergeSingers, singerColor, singersIn } from '@/lib/lyrics/voices'
+import { mergeSingers, singerColor, singersIn } from '@/lib/lyrics/voices'
 import { ArrangementBuilder } from './arrangement-builder'
+import { SongPreview } from './song-preview'
 
 const PLACEHOLDER = `Verso 1
 Escribí acá la primera estrofa,
@@ -46,6 +46,24 @@ function wrapInVoice(value: string, selStart: number, selEnd: number, name: stri
   return { next, caret: end + open.length }
 }
 
+/**
+ * What saving would take away from the song as it was opened, when it is
+ * enough to ask first: a whole part gone, or under 70% of the text left.
+ * Asking on every save would teach everyone to tap "Guardar igual" blind.
+ */
+function losses(before: SongContent, after: SongContent) {
+  const length = (c: SongContent) => c.blocks.reduce((n, b) => n + b.lyrics.trim().length, 0)
+  const labels = new Set(after.blocks.map((b) => b.label))
+  const texts = new Set(after.blocks.map((b) => b.lyrics.trim()))
+  // Renaming a part or rewording it is not losing it; both changing at once is.
+  const parts = before.blocks
+    .filter((b) => !labels.has(b.label) && !texts.has(b.lyrics.trim()))
+    .map((b) => b.label)
+  const was = length(before)
+  const kept = was === 0 ? 1 : length(after) / was
+  return parts.length > 0 || kept < 0.7 ? { parts, keptPercent: Math.round(kept * 100) } : null
+}
+
 export function SongEditor({
   song,
   singers,
@@ -62,6 +80,8 @@ export function SongEditor({
 }) {
   const [state, action, pending] = useActionState<SongFormState, FormData>(saveSong, {})
 
+  const formRef = useRef<HTMLFormElement>(null)
+  const confirmRef = useRef<HTMLDialogElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [raw, setRaw] = useState(() =>
     song ? serialiseSong(song.content.blocks, song.content.flow) : '',
@@ -83,7 +103,8 @@ export function SongEditor({
     return () => clearTimeout(timer)
   }, [raw])
 
-  const warnings = useMemo(() => parseLyrics(raw).warnings, [raw])
+  const parsedNow = useMemo(() => parseLyrics(raw), [raw])
+  const warnings = parsedNow.warnings
   const orphans = useMemo(
     () => unusedBlocks(content.blocks, content.flow),
     [content],
@@ -103,8 +124,19 @@ export function SongEditor({
     requestAnimationFrame(() => el.setSelectionRange(result.caret, result.caret))
   }
 
+  // Measured against the latest parse, not the debounced one, so text deleted
+  // a moment before tapping save still counts.
+  const pendingLoss = song
+    ? losses(song.content, { blocks: parsedNow.blocks, flow: content.flow })
+    : null
+
+  const save = () => {
+    if (pendingLoss) confirmRef.current?.showModal()
+    else formRef.current?.requestSubmit()
+  }
+
   return (
-    <form action={action} className="space-y-6">
+    <form ref={formRef} action={action} className="space-y-6">
       <input type="hidden" name="id" value={song?.id ?? ''} />
       <input type="hidden" name="content" value={JSON.stringify(content)} />
 
@@ -178,7 +210,7 @@ export function SongEditor({
       {content.flow.length > 0 ? (
         <section>
           <h2 className="mb-2 font-medium">Vista previa</h2>
-          <Preview content={content} roster={roster} />
+          <SongPreview content={content} roster={roster} />
         </section>
       ) : null}
 
@@ -189,14 +221,57 @@ export function SongEditor({
       ) : null}
 
       <div className="sticky bottom-0 -mx-4 border-t border-border bg-bg/90 px-4 py-3 backdrop-blur safe-pad">
+        {/* Not type="submit": saving goes through `save` so a big loss is asked about first. */}
         <button
-          type="submit"
+          type="button"
+          onClick={save}
           disabled={pending}
           className="w-full rounded-xl bg-brand px-4 py-3 font-semibold text-white transition active:scale-[0.99] disabled:opacity-60 sm:w-auto sm:px-8"
         >
           {pending ? 'Guardando…' : song ? 'Guardar cambios' : 'Guardar canción'}
         </button>
       </div>
+
+      <dialog
+        ref={confirmRef}
+        className="m-auto w-[min(92vw,26rem)] rounded-2xl border border-border bg-surface p-5 text-text shadow-xl backdrop:bg-black/60"
+      >
+        <h2 className="text-lg font-semibold">¿Guardar con menos letra?</h2>
+        <div className="mt-2 space-y-2 text-sm leading-relaxed text-muted">
+          {pendingLoss && pendingLoss.parts.length > 0 ? (
+            <p>
+              Se van estas partes: <b className="text-text">{pendingLoss.parts.join(', ')}</b>.
+            </p>
+          ) : null}
+          {pendingLoss && pendingLoss.keptPercent < 70 ? (
+            <p>
+              Queda el <b className="text-text">{pendingLoss.keptPercent}%</b> de la letra que
+              tenía.
+            </p>
+          ) : null}
+          <p>Si no fue a propósito, tocá «Seguir editando» y salí sin guardar.</p>
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            autoFocus
+            onClick={() => confirmRef.current?.close()}
+            className="rounded-xl border border-border px-4 py-2.5 text-sm font-medium"
+          >
+            Seguir editando
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              confirmRef.current?.close()
+              formRef.current?.requestSubmit()
+            }}
+            className="rounded-xl bg-red-500/90 px-4 py-2.5 text-sm font-semibold text-white"
+          >
+            Guardar igual
+          </button>
+        </div>
+      </dialog>
     </form>
   )
 }
@@ -303,56 +378,6 @@ function VoiceBar({ roster, onPick }: { roster: string[]; onPick: (name: string)
           </button>
         )}
       </div>
-    </div>
-  )
-}
-
-function Preview({ content, roster }: { content: SongContent; roster: string[] }) {
-  const byId = new Map(content.blocks.map((b) => [b.id, b]))
-  return (
-    <div className="overflow-hidden rounded-2xl border border-border">
-      {content.flow.map((id, index) => {
-        const block = byId.get(id)
-        if (!block) return null
-        const theme = BLOCK_THEME[block.kind]
-        return (
-          <div key={`${id}@${index}`} className="flex border-b border-border last:border-0">
-            <div
-              className="flex w-9 shrink-0 items-center justify-center py-3 text-[10px] font-bold uppercase tracking-wide text-white"
-              style={{ background: theme.tab, writingMode: 'vertical-rl', rotate: '180deg' }}
-            >
-              {block.label}
-            </div>
-            <div
-              className="flex-1 whitespace-pre-line px-4 py-3 text-sm leading-relaxed"
-              style={{ background: theme.accent }}
-            >
-              {lyricSegments(block).map((segment, i) => {
-                const gap = segment.gapBefore ? 'mt-[1.625em]' : ''
-                if (segment.singer === null) {
-                  return <p key={i} className={gap}>{segment.text}</p>
-                }
-                const color = singerColor(segment.singer, roster)
-                return (
-                  <div
-                    key={i}
-                    className={`my-1 rounded-r border-l-4 py-1 pl-3 text-muted ${gap}`}
-                    style={{ borderColor: color, background: `${color}26` }}
-                  >
-                    <span
-                      className="mb-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white"
-                      style={{ background: color }}
-                    >
-                      {segment.singer}
-                    </span>
-                    <p>{segment.text}</p>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )
-      })}
     </div>
   )
 }

@@ -9,7 +9,8 @@
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio",
-    "db:migrate": "node --experimental-strip-types scripts/migrate.ts"
+    "db:migrate": "node --experimental-strip-types scripts/migrate.ts",
+    "admin:link": "node --experimental-strip-types scripts/admin-link.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

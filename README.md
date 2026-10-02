@@ -35,15 +35,45 @@ nothing is silently dropped.
 - Next.js 16 (App Router, Turbopack) + React 19 + Tailwind 4
 - Postgres on Neon via `@neondatabase/serverless` + Drizzle ORM
 - `jose` for the signed session cookie, `@dnd-kit` for touch drag-and-drop
-- Single-password auth — one singer, no user table
+- Users, bands and roles in the same Postgres; passwords hashed with Node's scrypt
+
+## Users, bands and roles
+
+Every song, setlist and setting belongs to a **band**. People join a band
+through a single-use invitation link, with one of three roles:
+
+| | admin | editor | viewer |
+|---|---|---|---|
+| View and sing | ✓ | ✓ | ✓ |
+| Create/edit songs and setlists | ✓ | ✓ | |
+| Move to trash, restore | ✓ | | |
+| Invite, remove, change roles | ✓ | | |
+
+`src/lib/auth/permissions.ts` is the only place that maps roles to
+permissions. Pages use it to hide buttons; server actions check it again with
+`requirePermission()`, since a hidden button is not a permission check. Every
+query in `src/lib/db/queries.ts` takes the band id as a required argument.
+
+Nothing is hard-deleted from the app: "Eliminar" sets `deleted_at` and the
+admin restores it from **Papelera**. Saving a song that loses a whole part or
+more than 30% of its text asks first.
+
+The links nobody inside the app can create come from a script:
+
+```bash
+pnpm admin:link --url https://<app>                        # admin invite for the only band
+pnpm admin:link --url https://<app> --new-band "Name"      # a new band and its admin invite
+pnpm admin:link --url https://<app> --reset person@x.com   # new-password link
+```
 
 ## Local setup
 
 ```bash
 pnpm install
-cp .env.example .env.local     # then fill in the three values
-pnpm db:push                   # create the tables
+cp .env.example .env.local     # then fill in the two values
+pnpm db:migrate                # create the tables
 pnpm dev
+pnpm admin:link --url http://localhost:3000   # open the link to create your admin user
 ```
 
 `SESSION_SECRET` must be long and random: `openssl rand -base64 32`.
@@ -56,8 +86,10 @@ pnpm dev
    connection-string variable; the app reads `DATABASE_URL`, `STORAGE_URL` or
    `POSTGRES_URL`, whichever is set, so leave the integration's variable alone
    instead of copying its value elsewhere — the provider rotates it.
-4. Add `SONGBOOK_PASSWORD` and `SESSION_SECRET` as environment variables.
-5. Run `pnpm db:migrate` once against the production database to create tables.
+4. Add `SESSION_SECRET` as an environment variable.
+5. Run `pnpm db:migrate` against the production database to create tables.
+6. Run `pnpm admin:link --url https://<app>` and open the link to create the
+   band's admin.
 
 The connection string must be the **pooled** endpoint (host ending in
 `-pooler`). Serverless invocations are many and short-lived and will exhaust an

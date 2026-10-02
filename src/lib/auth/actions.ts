@@ -2,40 +2,32 @@
 
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { SESSION_COOKIE, createSessionToken, sessionCookieOptions } from './session'
+import { firstBandOf, findUserByEmail } from '@/lib/db/accounts'
+import { startSession } from './cookie'
+import { verifyPassword } from './password'
+import { SESSION_COOKIE } from './session'
 
-/** Constant-time compare so a wrong password can't be found byte by byte. */
-function safeEqual(a: string, b: string): boolean {
-  const enc = new TextEncoder()
-  const left = enc.encode(a)
-  const right = enc.encode(b)
-  // Comparing lengths directly would leak length; fold it into the result.
-  let diff = left.length ^ right.length
-  const max = Math.max(left.length, right.length)
-  for (let i = 0; i < max; i++) {
-    diff |= (left[i] ?? 0) ^ (right[i] ?? 0)
-  }
-  return diff === 0
-}
+export type LoginState = { error?: string; email?: string }
 
-export type LoginState = { error?: string }
+const WRONG = 'Email o contraseña incorrectos.'
 
-export async function login(
-  _prev: LoginState,
-  formData: FormData,
-): Promise<LoginState> {
-  const expected = process.env.SONGBOOK_PASSWORD
-  if (!expected) {
-    return { error: 'La app no tiene contraseña configurada. Revisá SONGBOOK_PASSWORD.' }
+export async function login(_prev: LoginState, formData: FormData): Promise<LoginState> {
+  const email = String(formData.get('email') ?? '').trim()
+  const password = String(formData.get('password') ?? '')
+  if (!email || !password) return { error: 'Completá email y contraseña.', email }
+
+  // One message for both cases, so the form does not reveal who has an account.
+  const user = await findUserByEmail(email)
+  if (!user || !(await verifyPassword(password, user.passwordHash))) {
+    return { error: WRONG, email }
   }
 
-  const submitted = String(formData.get('password') ?? '')
-  if (!safeEqual(submitted, expected)) {
-    return { error: 'Contraseña incorrecta.' }
+  const bandId = await firstBandOf(user.id)
+  if (!bandId) {
+    return { error: 'Tu usuario ya no está en ninguna banda. Pedile un link a quien la administra.', email }
   }
 
-  const store = await cookies()
-  store.set(SESSION_COOKIE, await createSessionToken(), sessionCookieOptions)
+  await startSession(user.id, bandId)
   redirect('/')
 }
 

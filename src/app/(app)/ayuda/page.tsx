@@ -92,6 +92,39 @@ Esta vuelve a ser tuya`}
         </p>
       </Section>
 
+      <Section title="Quién puede hacer qué">
+        <p>Cada persona entra con su propio usuario, y tiene uno de estos permisos:</p>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li>
+            <b>Admin</b>: hace todo. Es quien puede eliminar y quien suma gente desde{' '}
+            <b>Miembros</b>.
+          </li>
+          <li>
+            <b>Edita</b>: carga y cambia canciones y repertorios, pero no puede eliminar.
+          </li>
+          <li>
+            <b>Solo ve</b>: ve las canciones y canta. No puede cambiar nada.
+          </li>
+        </ul>
+        <p className="mt-3">
+          Para sumar a alguien: <b>Miembros → Crear link de invitación</b>, y se lo mandás por
+          WhatsApp. El link sirve una sola vez. Si alguien se olvida la contraseña, en{' '}
+          <b>Miembros</b> tocás <b>Nueva contraseña</b> y le mandás ese link.
+        </p>
+      </Section>
+
+      <Section title="Si eliminaste algo sin querer">
+        <p>
+          Nada se borra del todo. Lo que se elimina va a la <b>Papelera</b>, y desde ahí lo
+          recuperás con un toque, tal como estaba. Si era una canción, vuelve también a los
+          repertorios donde estaba.
+        </p>
+        <p className="mt-3">
+          Y si al editar una canción le sacás una parte entera o mucha letra, la app te
+          pregunta antes de guardar.
+        </p>
+      </Section>
+
       <Section title="Instalarla en el iPad">
         <p>
           Abrí la app en Safari, tocá el botón de compartir y elegí{' '}

@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { requireMember } from '@/lib/auth'
+import { can } from '@/lib/auth/permissions'
 import { ONBOARDING_KEY, getSetting, listSetlists, listSongs } from '@/lib/db/queries'
 
 export const dynamic = 'force-dynamic'
@@ -7,16 +9,18 @@ export const dynamic = 'force-dynamic'
 const dateFormat = new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'long' })
 
 export default async function HomePage() {
-  const done = await getSetting<boolean>(ONBOARDING_KEY)
+  const { bandId, name, role } = await requireMember()
+  const canEdit = can(role, 'content:edit')
+  const done = await getSetting<boolean>(bandId, ONBOARDING_KEY)
   if (!done) redirect('/bienvenida')
 
-  const [lists, songs] = await Promise.all([listSetlists(), listSongs()])
+  const [lists, songs] = await Promise.all([listSetlists(bandId), listSongs(bandId)])
   const next = lists[0]
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Hola 👋</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Hola, {name.split(' ')[0]} 👋</h1>
         <p className="text-sm text-muted">
           {songs.length} {songs.length === 1 ? 'canción' : 'canciones'} en tu librería.
         </p>
@@ -43,11 +47,11 @@ export default async function HomePage() {
               href={`/setlists/${next.id}`}
               className="rounded-xl border border-border px-5 py-2.5 text-sm font-medium"
             >
-              Editar
+              {canEdit ? 'Editar' : 'Ver'}
             </Link>
           </div>
         </section>
-      ) : (
+      ) : canEdit ? (
         <section className="rounded-2xl border border-dashed border-border bg-surface/50 p-6 text-center">
           <p className="text-4xl">📋</p>
           <p className="mt-3 font-medium">Armá tu primer repertorio</p>
@@ -61,8 +65,17 @@ export default async function HomePage() {
             Crear repertorio
           </Link>
         </section>
+      ) : (
+        <section className="rounded-2xl border border-dashed border-border bg-surface/50 p-6 text-center">
+          <p className="text-4xl">📋</p>
+          <p className="mt-3 font-medium">Todavía no hay repertorios</p>
+          <p className="mx-auto mt-1 max-w-sm text-sm text-muted">
+            Cuando alguien de la banda arme uno, lo vas a ver acá.
+          </p>
+        </section>
       )}
 
+      {canEdit ? (
       <div className="grid gap-3 sm:grid-cols-2">
         <Link
           href="/library/new"
@@ -81,6 +94,7 @@ export default async function HomePage() {
           <p className="text-sm text-muted">Armá el orden de cada servicio.</p>
         </Link>
       </div>
+      ) : null}
     </div>
   )
 }

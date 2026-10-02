@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { requireMember } from '@/lib/auth'
+import { can } from '@/lib/auth/permissions'
 import { listSongs } from '@/lib/db/queries'
 import { SearchBox } from '@/components/search-box'
 
@@ -11,7 +13,9 @@ export default async function LibraryPage({
   searchParams: Promise<{ q?: string }>
 }) {
   const { q } = await searchParams
-  const items = await listSongs(q)
+  const { bandId, role } = await requireMember()
+  const canEdit = can(role, 'content:edit')
+  const items = await listSongs(bandId, q)
 
   return (
     <div>
@@ -22,18 +26,20 @@ export default async function LibraryPage({
             {items.length} {items.length === 1 ? 'canción' : 'canciones'}
           </p>
         </div>
-        <Link
-          href="/library/new"
-          className="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white transition active:scale-[0.99]"
-        >
-          + Nueva canción
-        </Link>
+        {canEdit ? (
+          <Link
+            href="/library/new"
+            className="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white transition active:scale-[0.99]"
+          >
+            + Nueva canción
+          </Link>
+        ) : null}
       </div>
 
       <SearchBox placeholder="Buscar por título…" defaultValue={q ?? ''} />
 
       {items.length === 0 ? (
-        <EmptyState searching={Boolean(q)} />
+        <EmptyState searching={Boolean(q)} canEdit={canEdit} />
       ) : (
         <ul className="mt-4 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface">
           {items.map((song) => (
@@ -63,19 +69,21 @@ export default async function LibraryPage({
   )
 }
 
-function EmptyState({ searching }: { searching: boolean }) {
+function EmptyState({ searching, canEdit }: { searching: boolean; canEdit: boolean }) {
   return (
     <div className="mt-4 rounded-2xl border border-dashed border-border bg-surface/50 px-6 py-14 text-center">
       <p className="text-4xl">{searching ? '🔍' : '🎵'}</p>
       <p className="mt-3 font-medium">
-        {searching ? 'No encontramos esa canción' : 'Todavía no cargaste ninguna canción'}
+        {searching ? 'No encontramos esa canción' : 'Todavía no hay canciones cargadas'}
       </p>
       <p className="mx-auto mt-1 max-w-sm text-sm text-muted">
         {searching
           ? 'Probá con otra parte del título.'
-          : 'Cargá la primera y después armá el repertorio con las que vayas a cantar.'}
+          : canEdit
+            ? 'Cargá la primera y después armá el repertorio con las que vayas a cantar.'
+            : 'Cuando alguien de la banda cargue canciones, las vas a ver acá.'}
       </p>
-      {!searching ? (
+      {!searching && canEdit ? (
         <Link
           href="/library/new"
           className="mt-5 inline-block rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white"
