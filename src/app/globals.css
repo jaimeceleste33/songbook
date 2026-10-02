@@ -53,22 +53,35 @@ body {
 }
 
 /*
- * The welcome on the login, invitation and new-password pages: the note
- * settles in, then the card rises after it. Short on purpose — it plays
- * every time someone signs in.
+ * The welcome on the login, invitation and new-password pages: the logo
+ * pops in, then title, subtitle, card and credit rise one after another
+ * (`--step` sets each one's turn). Under a second in total, since it plays
+ * on every sign-in; afterwards only the glow keeps breathing, slowly.
  */
 @keyframes note-in {
-  0% { opacity: 0; transform: translateY(6px) scale(0.85) rotate(-8deg); }
-  60% { opacity: 1; transform: translateY(-2px) scale(1.06) rotate(3deg); }
+  0% { opacity: 0; transform: translateY(18px) scale(0.6) rotate(-14deg); }
+  55% { opacity: 1; transform: translateY(-4px) scale(1.08) rotate(4deg); }
+  80% { transform: translateY(1px) scale(0.98) rotate(-1deg); }
   100% { opacity: 1; transform: none; }
 }
-@keyframes rise-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: none; }
+@keyframes step-in {
+  from { opacity: 0; transform: translateY(18px); filter: blur(4px); }
+  to { opacity: 1; transform: none; filter: none; }
 }
-.welcome-note { animation: note-in 650ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-.welcome-rise { animation: rise-in 500ms ease-out 150ms both; }
+@keyframes glow-breathe {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.06); }
+}
+.welcome-note { animation: note-in 800ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.welcome-step {
+  animation: step-in 600ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(250ms + var(--step, 4) * 90ms);
+}
+.welcome-glow {
+  background: radial-gradient(ellipse 75% 70% at 50% 0%, rgb(59 130 246 / 0.30), rgb(99 102 241 / 0.10) 45%, transparent 100%);
+  animation: glow-breathe 7s ease-in-out infinite;
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .welcome-note, .welcome-rise { animation: none; }
+  .welcome-note, .welcome-step, .welcome-glow { animation: none; }
 }

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { requireMember } from '@/lib/auth'
 import { can } from '@/lib/auth/permissions'
+import { Credit } from '@/components/credit'
 import { LogoutButton } from '@/components/logout-button'
 import { NavLink } from '@/components/nav-link'
 
@@ -8,7 +9,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const member = await requireMember()
 
   return (
-    <div className="min-h-dvh">
+    <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-30 border-b border-border bg-bg/85 backdrop-blur">
         <nav className="mx-auto flex max-w-5xl items-center gap-1 px-4 py-3">
           <Link href="/" className="mr-3 flex items-center gap-2 font-semibold">
@@ -32,7 +33,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <LogoutButton />
         </nav>
       </header>
-      <main className="mx-auto max-w-5xl px-4 py-6 safe-pad">{children}</main>
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 safe-pad">{children}</main>
+      <footer className="mx-auto max-w-5xl px-4 pb-6 pt-10 safe-pad">
+        <Credit />
+      </footer>
     </div>
   )
 }

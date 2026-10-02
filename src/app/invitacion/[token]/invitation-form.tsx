@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState } from 'react'
-import { AccessError, AccessField, AccessSubmit } from '@/components/access/access-shell'
+import { AccessError, accessCardClass, AccessField, AccessSubmit } from '@/components/access/access-shell'
 import { PasswordField } from '@/components/access/password-field'
 import { acceptInvitation, type AccessState } from '@/lib/actions/access'
 import { MIN_PASSWORD_LENGTH } from '@/lib/auth/password-rules'
@@ -10,7 +10,7 @@ export function InvitationForm({ token }: { token: string }) {
   const [state, action, pending] = useActionState<AccessState, FormData>(acceptInvitation, {})
 
   return (
-    <form action={action} className="rounded-2xl border border-border bg-surface p-6">
+    <form action={action} className={accessCardClass}>
       <input type="hidden" name="token" value={token} />
       <AccessField
         label="Tu nombre"
