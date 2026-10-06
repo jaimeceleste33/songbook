@@ -1,4 +1,5 @@
 import {
+  boolean,
   index,
   integer,
   jsonb,
@@ -29,6 +30,11 @@ export const users = pgTable('users', {
   email: text('email').notNull().unique(),
   name: text('name').notNull(),
   passwordHash: text('password_hash').notNull(),
+  /**
+   * Chords over the lyrics when singing. Per person, not per band: the
+   * keyboard player wants them, most singers do not. Off unless turned on.
+   */
+  showChords: boolean('show_chords').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
@@ -101,6 +107,10 @@ export const songs = pgTable(
     title: text('title').notNull(),
     artist: text('artist'),
     songKey: text('song_key'),
+    /** Beats per minute, for whoever counts the band in. */
+    tempo: integer('tempo'),
+    /** "4/4", "6/8". Free text checked on save. */
+    timeSignature: text('time_signature'),
     content: jsonb('content').$type<SongContent>().notNull(),
     tags: text('tags').array().notNull().default([]),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

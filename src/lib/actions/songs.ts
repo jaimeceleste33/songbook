@@ -9,6 +9,20 @@ import { mergeSingers, sanitiseVoices, singersIn } from '@/lib/lyrics/voices'
 
 export type SongFormState = { error?: string }
 
+/** Empty is fine (unknown tempo); anything else must be a plausible BPM. */
+function parseTempo(raw: string): number | null | undefined {
+  if (raw === '') return null
+  const bpm = Number(raw)
+  return Number.isInteger(bpm) && bpm >= 20 && bpm <= 300 ? bpm : undefined
+}
+
+/** "4/4", "6/8", "12/8". Empty means not set. */
+function parseTimeSignature(raw: string): string | null | undefined {
+  const compact = raw.replace(/\s+/g, '')
+  if (compact === '') return null
+  return /^\d{1,2}\/(1|2|4|8|16)$/.test(compact) ? compact : undefined
+}
+
 /** Shape check: the payload arrives as JSON from the client editor. */
 function parseContent(raw: string): SongContent | null {
   try {
@@ -36,9 +50,15 @@ export async function saveSong(
   const title = String(formData.get('title') ?? '').trim()
   const artist = String(formData.get('artist') ?? '').trim() || null
   const songKey = String(formData.get('songKey') ?? '').trim() || null
+  const tempo = parseTempo(String(formData.get('tempo') ?? '').trim())
+  const timeSignature = parseTimeSignature(String(formData.get('timeSignature') ?? ''))
   const content = parseContent(String(formData.get('content') ?? ''))
 
   if (!title) return { error: 'Poné un título a la canción.' }
+  if (tempo === undefined) return { error: 'El tempo va en número, entre 20 y 300 BPM.' }
+  if (timeSignature === undefined) {
+    return { error: 'El compás se escribe como 4/4 o 6/8.' }
+  }
   if (!content) return { error: 'No pudimos leer la letra. Probá de nuevo.' }
   if (content.blocks.length === 0) return { error: 'Cargá al menos una parte con letra.' }
   if (content.flow.length === 0) {
@@ -46,12 +66,19 @@ export async function saveSong(
   }
 
   if (id) {
-    const saved = await q.updateSong(bandId, id, { title, artist, songKey, content })
+    const saved = await q.updateSong(bandId, id, {
+      title,
+      artist,
+      songKey,
+      tempo,
+      timeSignature,
+      content,
+    })
     if (!saved) {
       return { error: 'Esta canción ya no está en la librería (¿la mandaron a la papelera?).' }
     }
   } else {
-    await q.createSong(bandId, { title, artist, songKey, content })
+    await q.createSong(bandId, { title, artist, songKey, tempo, timeSignature, content })
   }
 
   // A singer named for the first time joins the roster and gets their colour.

@@ -55,6 +55,8 @@ export default async function EditSongPage({
             title: song.title,
             artist: song.artist,
             songKey: song.songKey,
+            tempo: song.tempo,
+            timeSignature: song.timeSignature,
             content: song.content,
           }}
           singers={singers}

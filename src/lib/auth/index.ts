@@ -11,6 +11,8 @@ export type Member = {
   userId: string
   name: string
   email: string
+  /** Their own choice, whatever band they are singing with. */
+  showChords: boolean
   bandId: string
   bandName: string
   role: Role

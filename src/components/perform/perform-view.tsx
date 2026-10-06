@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { saveShowChords } from '@/lib/actions/preferences'
 import { STAGE } from '@/lib/lyrics/theme'
 import { buildPages, type PerformPage, type PerformSong } from '@/lib/perform/layout'
 import { PAGE_PAD_TOP, PAGE_PAD_X, usableHeight, usableWidth } from '@/lib/perform/sheet'
@@ -20,10 +21,12 @@ export function PerformView({
   setlistName,
   songs,
   singers,
+  initialShowChords,
 }: {
   setlistName: string
   songs: PerformSong[]
   singers: string[]
+  initialShowChords: boolean
 }) {
   const stageRef = useRef<HTMLDivElement>(null)
   const measureRef = useRef<HTMLDivElement>(null)
@@ -34,6 +37,7 @@ export function PerformView({
   const [overlay, setOverlay] = useState(false)
   const [scale, setScale] = useState(1)
   const [ready, setReady] = useState(false)
+  const [showChords, setShowChords] = useState(initialShowChords)
 
   useWakeLock(true)
 
@@ -57,6 +61,13 @@ export function PerformView({
     }
   }
 
+  // Applied at once; saved in the background so it follows them to any device.
+  // A failed save (no signal) only means it is back to before next time.
+  const changeShowChords = (next: boolean) => {
+    setShowChords(next)
+    saveShowChords(next).catch(() => {})
+  }
+
   /** Re-lay out on mount, on resize and whenever the text size changes. */
   useLayoutEffect(() => {
     const stage = stageRef.current
@@ -73,7 +84,14 @@ export function PerformView({
         // page padding is not text space, and measuring it as if it were made
         // every line wrap later than it really does.
         host.style.width = `${usableWidth(rect.width)}px`
-        const built = buildPages(songs, host, usableHeight(rect.height), scale, singers)
+        const built = buildPages(
+          songs,
+          host,
+          usableHeight(rect.height),
+          scale,
+          singers,
+          showChords,
+        )
         setPages(built)
         setIndex((i) => Math.min(i, Math.max(0, built.length - 1)))
         setReady(true)
@@ -87,7 +105,7 @@ export function PerformView({
       observer.disconnect()
       cancelAnimationFrame(frame)
     }
-  }, [songs, scale, singers])
+  }, [songs, scale, singers, showChords])
 
   const total = pages.length
   const canNext = index < total - 1
@@ -356,6 +374,8 @@ export function PerformView({
           jumpTargets={jumpTargets}
           scale={scale}
           onScaleChange={changeScale}
+          showChords={showChords}
+          onShowChordsChange={changeShowChords}
           onJump={(pageIndex) => {
             setFlip(null)
             setIndex(pageIndex)

@@ -18,7 +18,7 @@ export default async function PerformPage({
 }: {
   params: Promise<{ id: string }>
 }) {
-  const { bandId } = await requireMember()
+  const { bandId, showChords } = await requireMember()
   const { id } = await params
   const [list, singers] = await Promise.all([
     getSetlistWithSongs(bandId, id),
@@ -31,8 +31,17 @@ export default async function PerformPage({
     title: item.song.title,
     artist: item.song.artist,
     songKey: item.song.songKey,
+    tempo: item.song.tempo,
+    timeSignature: item.song.timeSignature,
     content: item.song.content,
   }))
 
-  return <PerformView setlistName={list.name} songs={songs} singers={singers} />
+  return (
+    <PerformView
+      setlistName={list.name}
+      songs={songs}
+      singers={singers}
+      initialShowChords={showChords}
+    />
+  )
 }

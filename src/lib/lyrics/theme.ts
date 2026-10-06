@@ -41,6 +41,12 @@ export const STAGE = {
   ink: '#111827',
   /** Lines another singer sings. Still readable, clearly not hers to lead. */
   otherInk: '#4b5563',
+  /**
+   * Chords. Blue, the way chord sites print them, and kept apart from every
+   * singer colour below so a chord is never read as a name. Above 4.5:1 on
+   * every part tint.
+   */
+  chord: '#1d4ed8',
   /** Footer, page numbers, everything that is not the song. */
   chrome: '#64748b',
 } as const

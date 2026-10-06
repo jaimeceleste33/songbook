@@ -1,6 +1,17 @@
+import { hasChords, sheetLines } from '@/lib/lyrics/chords'
 import { BLOCK_THEME } from '@/lib/lyrics/theme'
 import type { SongContent } from '@/lib/lyrics/types'
 import { lyricSegments, singerColor } from '@/lib/lyrics/voices'
+import { chordStyles } from '@/lib/perform/sheet'
+import { ChordLines } from './chord-lines'
+
+/** Light blue: the stage's chord blue is unreadable on the dark editor. */
+const CHORDS = chordStyles('#93c5fd')
+
+/** The editor shows chords always: whoever edits a song has to see them to fix them. */
+function Lyrics({ text }: { text: string }) {
+  return hasChords(text) ? <ChordLines lines={sheetLines(text)} styles={CHORDS} /> : text
+}
 
 /** The song as it will be sung, parts in order. Read-only. */
 export function SongPreview({ content, roster }: { content: SongContent; roster: string[] }) {
@@ -26,7 +37,11 @@ export function SongPreview({ content, roster }: { content: SongContent; roster:
               {lyricSegments(block).map((segment, i) => {
                 const gap = segment.gapBefore ? 'mt-[1.625em]' : ''
                 if (segment.singer === null) {
-                  return <p key={i} className={gap}>{segment.text}</p>
+                  return (
+                    <div key={i} className={gap}>
+                      <Lyrics text={segment.text} />
+                    </div>
+                  )
                 }
                 const color = singerColor(segment.singer, roster)
                 return (
@@ -41,7 +56,9 @@ export function SongPreview({ content, roster }: { content: SongContent; roster:
                     >
                       {segment.singer}
                     </span>
-                    <p>{segment.text}</p>
+                    <div>
+                      <Lyrics text={segment.text} />
+                    </div>
                   </div>
                 )
               })}

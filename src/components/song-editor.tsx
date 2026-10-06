@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState } from 'react'
 import { saveSong, type SongFormState } from '@/lib/actions/songs'
-import { matchHeader, parseLyrics } from '@/lib/lyrics/parse'
+import { inlineChords, matchHeader, parseLyrics } from '@/lib/lyrics/parse'
 import { reconcileFlow, unusedBlocks } from '@/lib/lyrics/reconcile'
 import { serialiseSong } from '@/lib/lyrics/parse'
 import type { SongContent } from '@/lib/lyrics/types'
@@ -73,6 +73,8 @@ export function SongEditor({
     title: string
     artist: string | null
     songKey: string | null
+    tempo: number | null
+    timeSignature: string | null
     content: SongContent
   }
   /** The saved roster: its order is every singer's colour. */
@@ -124,6 +126,23 @@ export function SongEditor({
     requestAnimationFrame(() => el.setSelectionRange(result.caret, result.caret))
   }
 
+  /**
+   * A sheet pasted with chords above the lyrics is folded into chords inside
+   * the lines right away, so what the textarea shows is what gets saved — and
+   * marking a voice can never land between a chord line and its lyric.
+   */
+  const pasteWithChords = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const pasted = e.clipboardData.getData('text/plain')
+    const folded = inlineChords(pasted)
+    if (folded === pasted.replace(/\r\n?/g, '\n')) return
+    e.preventDefault()
+    const el = e.currentTarget
+    const next = el.value.slice(0, el.selectionStart) + folded + el.value.slice(el.selectionEnd)
+    const caret = el.selectionStart + folded.length
+    setRaw(next)
+    requestAnimationFrame(() => el.setSelectionRange(caret, caret))
+  }
+
   // Measured against the latest parse, not the debounced one, so text deleted
   // a moment before tapping save still counts.
   const pendingLoss = song
@@ -140,13 +159,17 @@ export function SongEditor({
       <input type="hidden" name="id" value={song?.id ?? ''} />
       <input type="hidden" name="content" value={JSON.stringify(content)} />
 
-      <section className="grid gap-3 sm:grid-cols-[2fr_1.2fr_0.7fr]">
+      <section className="grid grid-cols-3 gap-3 sm:grid-cols-[2fr_1.2fr_0.7fr_0.8fr_0.7fr]">
         <Field label="Título" name="title" defaultValue={song?.title ?? ''} required
-               placeholder="Nombre de la canción" autoFocus={!song} />
+               placeholder="Nombre de la canción" autoFocus={!song} className="col-span-3 sm:col-span-1" />
         <Field label="Autor o artista" name="artist" defaultValue={song?.artist ?? ''}
-               placeholder="Opcional" />
+               placeholder="Opcional" className="col-span-3 sm:col-span-1" />
         <Field label="Tono" name="songKey" defaultValue={song?.songKey ?? ''}
                placeholder="Ej: G" />
+        <Field label="Tempo (BPM)" name="tempo" defaultValue={song?.tempo?.toString() ?? ''}
+               placeholder="Ej: 72" inputMode="numeric" />
+        <Field label="Compás" name="timeSignature" defaultValue={song?.timeSignature ?? ''}
+               placeholder="Ej: 4/4" />
       </section>
 
       <section>
@@ -163,10 +186,16 @@ export function SongEditor({
           </p>
         </div>
         <VoiceBar roster={roster} onPick={markVoice} />
+        <p className="mb-2 text-xs text-muted">
+          ¿Con acordes? Pegala tal cual, con los acordes arriba de la letra, y se acomodan
+          solos. O escribilos antes de la sílaba:{' '}
+          <code className="text-text">Pues el [F#m]velo se ras[B]gó</code>
+        </p>
         <textarea
           ref={textareaRef}
           value={raw}
           onChange={(e) => setRaw(e.target.value)}
+          onPaste={pasteWithChords}
           rows={14}
           spellCheck={false}
           placeholder={PLACEHOLDER}
@@ -283,6 +312,8 @@ function Field({
   placeholder,
   required,
   autoFocus,
+  inputMode,
+  className,
 }: {
   label: string
   name: string
@@ -290,9 +321,11 @@ function Field({
   placeholder?: string
   required?: boolean
   autoFocus?: boolean
+  inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode']
+  className?: string
 }) {
   return (
-    <label className="block">
+    <label className={`block ${className ?? ''}`}>
       <span className="mb-1.5 block text-sm font-medium">{label}</span>
       <input
         name={name}
@@ -300,6 +333,7 @@ function Field({
         placeholder={placeholder}
         required={required}
         autoFocus={autoFocus}
+        inputMode={inputMode}
         className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-base outline-none focus:border-brand"
       />
     </label>

@@ -15,6 +15,13 @@
       "when": 1790958203834,
       "tag": "0001_bands_and_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791295789925,
+      "tag": "0002_chords_and_tempo",
+      "breakpoints": true
     }
   ]
 }

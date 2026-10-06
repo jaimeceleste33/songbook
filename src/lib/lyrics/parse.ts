@@ -1,3 +1,4 @@
+import { hasChords, isChord, isChordLine, mergeChordLine } from './chords'
 import type { BlockKind, ParseResult, ParseWarning, SongBlock } from './types'
 import {
   matchVoiceMarker,
@@ -29,9 +30,49 @@ const BARE_HEADER = new RegExp(
   'i',
 )
 
-/** The label this line opens, or null if it is lyrics. */
+/**
+ * The label this line opens, or null if it is lyrics. `[E]` alone on a line is
+ * an intro chord, not a part called "E".
+ */
 export function matchHeader(line: string): string | null {
-  return (line.match(BRACKETED_HEADER) ?? line.match(BARE_HEADER))?.[1] ?? null
+  const label = (line.match(BRACKETED_HEADER) ?? line.match(BARE_HEADER))?.[1] ?? null
+  return label !== null && isChord(label) ? null : label
+}
+
+/**
+ * Turns a "chords above the lyrics" sheet — the way chord sites print it —
+ * into chords inside the lyric line. Text that has no chord lines comes back
+ * unchanged, so this is safe to run on anything.
+ *
+ * A chord line only joins the line below when that line is lyrics: never a
+ * part name, a voice marker, a blank or another chord line. Otherwise it
+ * stays on its own as `[E]  [B]`.
+ */
+export function inlineChords(raw: string): string {
+  const lines = raw.replace(/\r\n?/g, '\n').split('\n')
+  const out: string[] = []
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    if (!isChordLine(line)) {
+      out.push(line)
+      continue
+    }
+    const next = lines[i + 1]
+    const isLyric =
+      next !== undefined &&
+      next.trim() !== '' &&
+      matchHeader(next) === null &&
+      matchVoiceMarker(next) === undefined &&
+      !isChordLine(next) &&
+      !hasChords(next)
+    if (isLyric) {
+      out.push(mergeChordLine(line, next))
+      i++
+    } else {
+      out.push(mergeChordLine(line, ''))
+    }
+  }
+  return out.join('\n')
 }
 
 /**
@@ -97,7 +138,7 @@ function normaliseLines(lines: VoicedLine[]): VoicedLine[] {
  * becomes its own block and we report a warning.
  */
 export function parseLyrics(raw: string): ParseResult {
-  const lines = raw.replace(/\r\n?/g, '\n').split('\n')
+  const lines = inlineChords(raw).split('\n')
 
   const blocks: SongBlock[] = []
   const flow: string[] = []

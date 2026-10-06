@@ -31,6 +31,7 @@ export async function getMembership(userId: string, bandId: string) {
       userId: users.id,
       name: users.name,
       email: users.email,
+      showChords: users.showChords,
       bandId: bands.id,
       bandName: bands.name,
       role: bandMembers.role,
@@ -41,6 +42,10 @@ export async function getMembership(userId: string, bandId: string) {
     .where(and(eq(bandMembers.userId, userId), eq(bandMembers.bandId, bandId)))
     .limit(1)
   return row ?? null
+}
+
+export async function setShowChords(userId: string, on: boolean) {
+  await db.update(users).set({ showChords: on }).where(eq(users.id, userId))
 }
 
 /** The band a user lands in after logging in: the first one they joined. */

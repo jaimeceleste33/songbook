@@ -57,6 +57,27 @@ Esta vuelve a ser tuya`}
         </p>
       </Section>
 
+      <Section title="Acordes">
+        <p>
+          Si copiás la canción de una página de acordes, pegala tal cual: los acordes que
+          están en el renglón de arriba se acomodan solos sobre su sílaba. También los
+          podés escribir a mano, entre corchetes, justo antes de la sílaba:
+        </p>
+        <pre className="mt-3 overflow-x-auto rounded-xl bg-surface-2 p-4 text-xs leading-relaxed">
+{`Pre-coro
+Pues el [F#m]velo [E]se ras[B]gó`}
+        </pre>
+        <p className="mt-3">
+          Cada persona elige si los ve: en la pantalla de cantar, tocá el centro y usá{' '}
+          <b>Acordes</b>. Arrancan apagados, y lo que elijas te sigue en cualquier
+          dispositivo. Con los acordes apagados la hoja queda igual que siempre.
+        </p>
+        <p className="mt-3">
+          Al cargar la canción también podés poner el <b>tempo</b> y el <b>compás</b>:
+          salen arriba, al lado del tono.
+        </p>
+      </Section>
+
       <Section title="2 · Armar el orden">
         <p>
           Abajo del texto aparecen las partes que escribiste. Tocalas en el orden en que

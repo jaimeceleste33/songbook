@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 import { BLOCK_THEME, STAGE } from '@/lib/lyrics/theme'
+import { hasChords, sheetLines, type SheetLine } from '@/lib/lyrics/chords'
 import type { SongBlock } from '@/lib/lyrics/types'
 import { lyricSegments, singerColor } from '@/lib/lyrics/voices'
 
@@ -105,6 +106,12 @@ const LINE = '1.28em'
 export interface SegmentView {
   key: string
   text: string
+  /**
+   * The lyrics line by line, when they carry chords. Null means plain text,
+   * drawn exactly as before chords existed — which is always the case for
+   * someone with chords turned off, since their parts arrive already stripped.
+   */
+  lines: SheetLine[] | null
   /** Name on the tag, or null for the lead's own lines. */
   singer: string | null
   box: CSSProperties
@@ -124,10 +131,12 @@ export interface SegmentView {
 export function segmentViews(block: SongBlock, singers: string[]): SegmentView[] {
   return lyricSegments(block).map((segment, i) => {
     const gap = segment.gapBefore ? LINE : undefined
+    const lines = hasChords(segment.text) ? sheetLines(segment.text) : null
     if (segment.singer === null) {
       return {
         key: `s${i}`,
         text: segment.text,
+        lines,
         singer: null,
         box: { marginTop: gap },
         tag: {},
@@ -139,6 +148,7 @@ export function segmentViews(block: SongBlock, singers: string[]): SegmentView[]
     return {
       key: `s${i}`,
       text: segment.text,
+      lines,
       singer: segment.singer,
       box: {
         marginTop: gap ?? '0.18em',
@@ -170,6 +180,57 @@ export function segmentViews(block: SongBlock, singers: string[]): SegmentView[]
       body: { color: STAGE.otherInk },
     }
   })
+}
+
+export interface ChordStyles {
+  /** One lyric line; a line that wraps stays one block. */
+  line: CSSProperties
+  blank: CSSProperties
+  /** A word with a chord in it: never split across two rows. */
+  word: CSSProperties
+  /** Chord on top, its syllable underneath. */
+  anchor: CSSProperties
+  chord: CSSProperties
+  syllable: CSSProperties
+  /** A line of only chords — an intro, a turnaround. */
+  chordRow: CSSProperties
+  chordRowItem: CSSProperties
+}
+
+/**
+ * Chords over their syllables. Each chord sits on top of the exact syllable
+ * it is played on, so a line that wraps on a narrow screen carries its chords
+ * with it — aligning chords with spaces, the way the sites print them, falls
+ * apart the moment the line wraps or the font is not monospaced.
+ *
+ * A chord wider than its syllable pushes the rest of the word along
+ * ("tem- -bló"): spacing out a word beats two chords printed on top of each
+ * other. Lines without chords are drawn exactly like before.
+ *
+ * `color` is a parameter because the editor preview sits on the dark app, not
+ * on paper.
+ */
+export function chordStyles(color: string = STAGE.chord): ChordStyles {
+  const chordText: CSSProperties = {
+    fontSize: '0.72em',
+    fontWeight: 800,
+    lineHeight: 1.2,
+    color,
+    whiteSpace: 'nowrap',
+  }
+  return {
+    line: {},
+    blank: { height: LINE },
+    word: { whiteSpace: 'nowrap' },
+    // Its baseline is its last line — the syllable — so it sits on the
+    // lyrics' baseline and the chord rises above the line.
+    anchor: { display: 'inline-block' },
+    chord: { ...chordText, display: 'block', paddingRight: '0.4em' },
+    syllable: { display: 'block' },
+    // Smaller than a lyric line: there are no words under these chords.
+    chordRow: { ...chordText, whiteSpace: 'normal', padding: '0.1em 0' },
+    chordRowItem: { display: 'inline-block', marginRight: '1.6em' },
+  }
 }
 
 /** Apply a style object to a real node, for the off-screen ruler. */

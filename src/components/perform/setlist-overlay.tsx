@@ -15,6 +15,8 @@ export function SetlistOverlay({
   jumpTargets,
   scale,
   onScaleChange,
+  showChords,
+  onShowChordsChange,
   onJump,
   onClose,
 }: {
@@ -25,6 +27,8 @@ export function SetlistOverlay({
   jumpTargets: Map<number, number>
   scale: number
   onScaleChange: (next: number) => void
+  showChords: boolean
+  onShowChordsChange: (next: boolean) => void
   onJump: (pageIndex: number) => void
   onClose: () => void
 }) {
@@ -113,6 +117,26 @@ export function SetlistOverlay({
         </ol>
 
         <div className="mt-3 flex shrink-0 items-center justify-between gap-3 rounded-xl bg-white/5 px-4 py-3">
+          <span className="text-sm text-white/60">Acordes</span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={showChords}
+            aria-label="Mostrar acordes"
+            onClick={() => onShowChordsChange(!showChords)}
+            className={`relative h-8 w-14 shrink-0 rounded-full transition ${
+              showChords ? 'bg-brand' : 'bg-white/15'
+            }`}
+          >
+            <span
+              className={`absolute top-1 left-1 size-6 rounded-full bg-white transition-transform ${
+                showChords ? 'translate-x-6' : ''
+              }`}
+            />
+          </button>
+        </div>
+
+        <div className="mt-2 flex shrink-0 items-center justify-between gap-3 rounded-xl bg-white/5 px-4 py-3">
           <span className="text-sm text-white/60">Tamaño de letra</span>
           <div className="flex items-center gap-2">
             <button

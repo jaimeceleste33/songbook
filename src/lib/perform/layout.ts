@@ -1,14 +1,25 @@
+import type { CSSProperties } from 'react'
+import { withoutChords, type SheetLine } from '@/lib/lyrics/chords'
 import { expandFlow } from '@/lib/lyrics/parse'
 import { BLOCK_THEME } from '@/lib/lyrics/theme'
 import type { SongContent } from '@/lib/lyrics/types'
 import { FONT_MAX, FONT_MIN, fitFontSize, packPages, type FlowEntry } from './paginate'
-import { BLOCK_GAP, applyStyle, blockStyles, segmentViews } from './sheet'
+import {
+  BLOCK_GAP,
+  applyStyle,
+  blockStyles,
+  chordStyles,
+  segmentViews,
+  type ChordStyles,
+} from './sheet'
 
 export interface PerformSong {
   id: string
   title: string
   artist: string | null
   songKey: string | null
+  tempo: number | null
+  timeSignature: string | null
   content: SongContent
 }
 
@@ -18,6 +29,8 @@ export interface PerformPage {
   title: string
   artist: string | null
   songKey: string | null
+  tempo: number | null
+  timeSignature: string | null
   /** 1-based page number within its song. */
   pageInSong: number
   pagesInSong: number
@@ -27,12 +40,63 @@ export interface PerformPage {
   singers: string[]
 }
 
-/** Flow entries with keys unique per position. */
-export function entriesOf(content: SongContent): FlowEntry[] {
-  return expandFlow(content.blocks, content.flow).map((e, index) => ({
+/**
+ * Flow entries with keys unique per position. With chords off the parts are
+ * stripped HERE, before anything is measured or drawn, so the page is exactly
+ * the one there was before chords existed.
+ */
+export function entriesOf(content: SongContent, showChords: boolean): FlowEntry[] {
+  const blocks = showChords ? content.blocks : content.blocks.map(withoutChords)
+  return expandFlow(blocks, content.flow).map((e, index) => ({
     ...e,
     key: `${e.block.id}@${index}`,
   }))
+}
+
+const CHORDS = chordStyles()
+
+/** `ChordLines` (components/chord-lines.tsx), built by hand for the ruler. */
+function appendChordLines(parent: HTMLElement, lines: SheetLine[], styles: ChordStyles) {
+  const el = (style: CSSProperties, text?: string) => {
+    const node = document.createElement('span')
+    applyStyle(node, style)
+    if (text !== undefined) node.textContent = text
+    return node
+  }
+  for (const line of lines) {
+    const row = document.createElement('div')
+    if (line.kind === 'blank') {
+      applyStyle(row, styles.blank)
+    } else if (line.kind === 'text') {
+      applyStyle(row, styles.line)
+      row.textContent = line.text
+    } else if (line.kind === 'chords') {
+      applyStyle(row, styles.chordRow)
+      for (const chord of line.chords) row.append(el(styles.chordRowItem, chord))
+    } else {
+      applyStyle(row, styles.line)
+      for (const run of line.runs) {
+        if ('space' in run) {
+          row.append(run.space)
+        } else if (run.word.every((p) => p.chord === null)) {
+          row.append(run.word.map((p) => p.text).join(''))
+        } else {
+          const word = el(styles.word)
+          for (const piece of run.word) {
+            if (piece.chord === null) {
+              word.append(piece.text)
+              continue
+            }
+            const anchor = el(styles.anchor)
+            anchor.append(el(styles.chord, piece.chord), el(styles.syllable, piece.text || '\u00a0'))
+            word.append(anchor)
+          }
+          row.append(word)
+        }
+      }
+    }
+    parent.append(row)
+  }
 }
 
 /**
@@ -79,7 +143,8 @@ export function measureAll(
         }
         const text = document.createElement('div')
         applyStyle(text, view.body)
-        text.textContent = view.text
+        if (view.lines) appendChordLines(text, view.lines, CHORDS)
+        else text.textContent = view.text
         box.append(text)
         body.append(box)
       }
@@ -109,13 +174,14 @@ export function buildPages(
   pageHeight: number,
   scale: number,
   singers: string[],
+  showChords: boolean,
 ): PerformPage[] {
   const pages: PerformPage[] = []
   const min = Math.round(FONT_MIN * scale)
   const max = Math.round(FONT_MAX * scale)
 
   songs.forEach((song, songIndex) => {
-    const entries = entriesOf(song.content)
+    const entries = entriesOf(song.content, showChords)
     if (entries.length === 0) return
 
     const cache = new Map<number, Map<string, number>>()
@@ -144,6 +210,8 @@ export function buildPages(
         title: song.title,
         artist: song.artist,
         songKey: song.songKey,
+        tempo: song.tempo,
+        timeSignature: song.timeSignature,
         pageInSong: index + 1,
         pagesInSong: packed.length,
         fontSize,

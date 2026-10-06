@@ -49,6 +49,8 @@ export async function createSong(
     title: string
     artist?: string | null
     songKey?: string | null
+    tempo?: number | null
+    timeSignature?: string | null
     content: SongContent
   },
 ) {
@@ -59,6 +61,8 @@ export async function createSong(
       title: input.title,
       artist: input.artist ?? null,
       songKey: input.songKey ?? null,
+      tempo: input.tempo ?? null,
+      timeSignature: input.timeSignature ?? null,
       content: input.content,
     })
     .returning({ id: songs.id })
@@ -73,6 +77,8 @@ export async function updateSong(
     title: string
     artist?: string | null
     songKey?: string | null
+    tempo?: number | null
+    timeSignature?: string | null
     content: SongContent
   },
 ): Promise<boolean> {
@@ -82,6 +88,8 @@ export async function updateSong(
       title: input.title,
       artist: input.artist ?? null,
       songKey: input.songKey ?? null,
+      tempo: input.tempo ?? null,
+      timeSignature: input.timeSignature ?? null,
       content: input.content,
       updatedAt: new Date(),
     })

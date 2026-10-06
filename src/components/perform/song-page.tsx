@@ -7,8 +7,12 @@ import {
   HEADER_GAP,
   HEADER_H,
   blockStyles,
+  chordStyles,
   segmentViews,
 } from '@/lib/perform/sheet'
+import { ChordLines } from '../chord-lines'
+
+const CHORDS = chordStyles()
 
 /**
  * One printed page.
@@ -35,8 +39,14 @@ export function SongPage({ page }: { page: PerformPage }) {
           {page.title}
         </h1>
         <span className="shrink-0 text-sm font-semibold tabular-nums opacity-80">
-          {page.songKey ? `${page.songKey} · ` : ''}
-          {page.pagesInSong > 1 ? `${page.pageInSong}/${page.pagesInSong}` : ''}
+          {[
+            page.songKey,
+            page.tempo ? `${page.tempo} BPM` : null,
+            page.timeSignature,
+            page.pagesInSong > 1 ? `${page.pageInSong}/${page.pagesInSong}` : null,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
         </span>
       </header>
 
@@ -60,7 +70,9 @@ export function SongPage({ page }: { page: PerformPage }) {
                 {segmentViews(entry.block, page.singers).map((view) => (
                   <div key={view.key} style={view.box}>
                     {view.singer !== null ? <div style={view.tag}>{view.singer}</div> : null}
-                    <div style={view.body}>{view.text}</div>
+                    <div style={view.body}>
+                      {view.lines ? <ChordLines lines={view.lines} styles={CHORDS} /> : view.text}
+                    </div>
                   </div>
                 ))}
               </div>
